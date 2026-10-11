@@ -9,6 +9,7 @@ test('authenticated journal CRUD, isolation and atomic imports',async()=>{
  try{
   await new Promise((resolve,reject)=>{const timeout=setTimeout(()=>reject(Error('Startup timeout')),5000);child.stdout.once('data',()=>{clearTimeout(timeout);resolve()});child.once('exit',()=>{clearTimeout(timeout);reject(Error('Server exited'))})});
   async function req(p,method='GET',data,cookie){const r=await fetch(base+p,{method,headers:{'Content-Type':'application/json',...(cookie?{Cookie:cookie}:{})},body:data?JSON.stringify(data):undefined});return {status:r.status,body:await r.text().then(t=>{try{return JSON.parse(t)}catch{return t}}),cookie:r.headers.get('set-cookie')?.split(';')[0]}}
+  const publicData=await req('/api/dataset');assert.equal(publicData.status,200);assert.equal(publicData.body.records.length,4806);assert.equal(publicData.body.metadata.pairs,128);
   const password=crypto.randomBytes(20).toString('hex');
   const a=await req('/api/register','POST',{email:'a@example.com',password});assert.equal(a.status,201);assert.equal(a.body.user.role,'member');
   const b=await req('/api/register','POST',{email:'b@example.com',password});
