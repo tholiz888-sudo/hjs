@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: langlang-dashboard
+    runtime: node
+    plan: free
+    buildCommand: npm run check
+    startCommand: npm start
+    healthCheckPath: /api/session
+    envVars:
+      - key: NODE_VERSION
+        value: 24.19.0
+      - key: COOKIE_SECURE
+        value: "1"

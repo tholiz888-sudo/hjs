@@ -1,0 +1,13 @@
+{
+  "name": "langlang-dashboard-recreation",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "check": "node --check app.js && node --check auth.js && node --check server.js"
+  },
+  "engines": {
+    "node": "24.x"
+  }
+}
