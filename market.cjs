@@ -13,3 +13,20 @@ async function historicalCandles({pair,period,start,end},fetcher=fetch){
  return {candles,source:'OKX 历史行情',partial:!exhausted,start,end};
 }
 module.exports={historicalCandles};
+
+// The user's existing public deployment can relay market reads for local machines.
+// Only OHLC parameters are forwarded, never cookies or account credentials.
+async function candlesWithFallback(params,{allowRelay=false,fetcher=fetch}={}){
+ try{return await historicalCandles(params,fetcher)}catch(directError){
+  if(!allowRelay||/参数|无效数据|分页|交易对的历史行情/.test(directError.message))throw directError;
+  const url=new URL('https://hjs-fqyj.onrender.com/api/candles');url.search=new URLSearchParams(Object.entries(params).map(([k,v])=>[k,String(v)]));
+  try{
+   const response=await fetcher(url,{signal:AbortSignal.timeout(65000),headers:{'X-HJS-Market-Relay':'1'},redirect:'error'});
+   if(!response.ok)throw Error('在线备用站点返回 HTTP '+response.status);
+   const result=await response.json();if(!Array.isArray(result.candles)||result.candles.length>1800)throw Error('备用行情数据格式无效');
+   for(const c of result.candles)if(c.pair!==params.pair||![c.time,c.open,c.high,c.low,c.close,c.volume].every(Number.isFinite)||c.time<params.start||c.time>params.end||c.low<=0||c.high<Math.max(c.open,c.low,c.close)||c.low>Math.min(c.open,c.close)||c.volume<0)throw Error('备用行情数据校验失败');
+   return {...result,source:'OKX 历史行情（经在线站点）'};
+  }catch(relayError){throw Error('本地无法连接行情服务，在线备用通道也未成功。请确认浏览器能打开 hjs-fqyj.onrender.com，然后重试；或导入行情 CSV。')}
+ }
+}
+module.exports.candlesWithFallback=candlesWithFallback;
