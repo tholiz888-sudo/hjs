@@ -19,3 +19,11 @@ test('relay cannot turn invalid requests or invalid returned prices into success
  await assert.rejects(candlesWithFallback({pair:'bad',period:5,start,end},{allowRelay:true,fetcher:async()=>{calls++;throw Error()}}),/参数/);assert.equal(calls,0);
  await assert.rejects(candlesWithFallback({pair:'BTC-USDT-SWAP',period:5,start,end},{allowRelay:true,fetcher:async()=>{if(++calls===1)throw Error('fetch failed');return {ok:true,json:async()=>({candles:[{pair:'BTC-USDT-SWAP',time:start,open:100,high:80,low:90,close:105,volume:12}]})}}}),/备用通道/);
 });
+
+test('fast relay wins while direct transport is pending, and losing request is cancelled',async()=>{
+ const {candlesWithFallback}=require('../market.cjs');let directCancelled=false;
+ const result=await candlesWithFallback({pair:'BTC-USDT-SWAP',period:5,start,end},{allowRelay:true,fetcher:async(url,options)=>{
+  if(url.hostname==='www.okx.com')return new Promise((resolve,reject)=>options.signal.addEventListener('abort',()=>{directCancelled=true;reject(Error('cancelled'))},{once:true}));
+  return {ok:true,json:async()=>({candles:[{pair:'BTC-USDT-SWAP',time:start,open:100,high:110,low:90,close:105,volume:12}],partial:false})};
+ }});assert.equal(result.candles.length,1);assert.equal(directCancelled,true);
+});
