@@ -2,6 +2,7 @@
 services:
   - type: web
     name: jiange-preview
+    branch: codex/jiange-deploy
     runtime: node
     plan: free
     buildCommand: npm ci --no-audit --no-fund && npm run build

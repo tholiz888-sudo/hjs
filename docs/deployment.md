@@ -36,6 +36,8 @@ NODE_ENV=production PORT=3020 DB_PATH=/opt/jiange-storage/app.sqlite npm start
 3. 选择 **New → Blueprint**，选择仓库，按 `render.yaml` 创建免费服务。
 4. 等构建与健康检查成功，Render会分配真实HTTPS地址。在成功之前不能提前声称已经上线。
 
+本项目代码已由助手推送至 `https://github.com/tholiz888-sudo/hjs/tree/codex/jiange-deploy`，因此无需重复上传部署包。在Render选择仓库 `tholiz888-sudo/hjs`，Blueprint分支选择 `codex/jiange-deploy`。仓库的 `main` 分支含其他项目，不应直接替换或用来部署本复刻版。
+
 Render的GitHub授权只能由用户在平台上完成，不需要把GitHub或Render密码发到聊天中。配置中没有创建付费磁盘；如升级为长期使用，先确认费用，再配置持久磁盘和 `DB_PATH`。
 
 选择支持Node.js24、HTTPS和持久磁盘的平台；构建命令为 `npm ci && npm run build`，启动命令为 `npm start`，健康检查为 `/api/health`。设置平台提供的 `PORT` 和持久磁盘路径对应的 `DB_PATH`。在HTTPS入口设置 `COOKIE_SECURE=1`。
