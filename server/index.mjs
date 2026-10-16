@@ -76,7 +76,7 @@ if(p==='/api/notifications'&&method==='GET'){const u=signed(req);return json(res
 if(/^\/api\/notifications\/\d+$/.test(p)&&method==='PATCH'){const u=signed(req);db.prepare('UPDATE inbox SET read_at=? WHERE id=? AND user_id=?').run(business.stamp(),Number(p.split('/').at(-1)),u.id);return json(res,{ok:true})}
 
 if(p==='/api/strategies'&&method==='GET'){const u=user(req);return json(res,strategies.publicData(url.searchParams.get('category')||'stocks',u,!!viewUser(u)?.isAdmin))}
-if(p==='/api/market/tickers'&&method==='GET')return json(res,{items:live().tickers,source:market.status().source,updatedAt:market.status().updatedAt,status:market.status()});
+if(p==='/api/market/tickers'&&method==='GET')return json(res,{items:live().tickers,source:market.status().source,updatedAt:market.status().priceUpdatedAt,status:market.status()});
 if(p==='/api/market/status'&&method==='GET')return json(res,market.status());
 if(p==='/api/market/sync'&&method==='POST'){signed(req);try{await market.sync();return json(res,market.status())}catch(e){return json(res,{...market.status(),error:e.message},503)}}
 function live(){if(!market.status().ready)fail(market.status().error||'后台正在连接 '+market.status().exchangeName+'，首轮采集尚未完成',503);return market.data()}
