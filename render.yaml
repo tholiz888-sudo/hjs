@@ -22,3 +22,9 @@ services:
         value: "1"
       - key: MARKET_SYMBOL_LIMIT
         value: "20"
+      - key: MARKET_AUTO_SYNC
+        value: "1"
+      - key: MARKET_REFRESH_SECONDS
+        value: "60"
+      - key: MARKET_MIN_QUOTE_VOLUME
+        value: "1000000"

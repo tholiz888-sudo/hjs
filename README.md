@@ -38,19 +38,19 @@ PORT=5173 npm start
 
 ## 数据与算法
 
-默认使用 `data/snapshot.json` 和 `data/charts-snapshot.json` 的历史快照，界面显示采集时间。聪明钱、KOL和大额监听目前没有独立实时数据供应商。
+行情页面默认实时模式：后端启动后自动采集，页面每10秒读取结果。连接失败时会显示原因和重试时间，不自动用历史数据替代。历史模式可手动选择 `data/snapshot.json` 和 `data/charts-snapshot.json` 中的数据。KOL与人工内容仍为历史快照。
 
-点击“连接 Binance”会由自己的后端请求 `https://fapi.binance.com`：
+服务启动后由自己的后端自动请求 `https://fapi.binance.com`，无需交易所API Key；登录本地账号后也可以手动刷新：
 
 - 只读取USDT永续合约，按24小时成交额选择交易对。
 - 默认扫描前20个，设置 `MARKET_SYMBOL_LIMIT=200` 可扩大到200个。
 - 获取3m、5m、15m各700根K线，排除未收盘K线后本地计算。
 - EMA21/55/200；MACD12/26/9；ATR使用Wilder递推。指标核心见 `server/indicators.mjs`。
 - Supertrend默认ATR10、倍数3；放量使用前20根均量、5倍阈值及2%单根涨跌幅；TD为收盘与4根前比较的Setup计数。它们是标准实现，原站完整规则未确认，不能宣称结果与原站完全相同。
-- 同一进程每次扫描至少间隔30秒，前端实时模式每60秒请求；扫描失败保留明确错误和原来的采集时间，不自动生成模拟行情。
+- 后台默认每60秒采集，页面每10秒读取结果；K线尚未收盘时复用已验证缓存，有新K线时增量补采。后台与手动刷新共享任务，避免多用户重复扫描。扫描失败保留明确错误和原来的采集时间，不自动生成模拟行情。
 - 确定的默认筛选阈值及不确定项见 `docs/algorithm-notes.md`。
 
-**当前外部阻塞：Binance返回HTTP 451，提示运行地区不符合其访问条件。** 连接器已实现，但此环境未通过真实行情端到端验证。不要绕过地区限制；需在Binance允许的运行环境验证。网络设置草稿已加入 `fapi.binance.com`，网络域名放行本身不能解决交易所地区限制。
+**当前开发环境外部阻塞：Binance返回HTTP 451，提示运行地区不符合其访问条件。** 自动连接器已实现，但此开发环境未通过真实行情端到端验证。线上状态以 `/api/market/status` 的 `ready`、`stale`、`errorCode` 和 `updatedAt` 为准。不要绕过地区限制；需在Binance允许的运行环境验证。网络设置草稿已加入 `fapi.binance.com`，网络域名放行本身不能解决交易所地区限制。
 
 ## 保存和持久化
 
@@ -73,3 +73,5 @@ npm run test:e2e
 浏览器测试默认使用 `/usr/bin/chromium`，可设置 `CHROMIUM_PATH`。可通过 `TEST_BASE_URL` 指定其他已启动服务。截图输出至Git忽略的 `test-results/`。
 
 验证覆盖：EMA/MACD参考样本递推、ATR缺口、趋势因果性、放量基线、TD重置、账号隔离、积分事务、数据源标识、16个桌面/手机视图与主要浏览器操作。外部Binance行情受451阻塞，未列为通过。
+
+自动行情、缓存、错误退避及Render休眠说明见 [部署文档](docs/deployment.md#后台自动行情)。新增 `npm run test:live-ui` 检查受控测试数据下的自动到达、价格刷新、过期提示与断线状态；它不代表外部Binance已连接。

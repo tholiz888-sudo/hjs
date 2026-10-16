@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 const origin=process.env.TEST_BASE_URL||'http://localhost:5173';
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
-const page=await browser.newPage({viewport:{width:1870,height:1000}});const errors=[];page.on('pageerror',e=>errors.push(e.message));const output=new URL('../test-results/',import.meta.url);await fs.mkdir(output,{recursive:true});
+const page=await browser.newPage({viewport:{width:1870,height:1000}});await page.addInitScript(()=>localStorage.setItem('jiange-data-mode-v2','snapshot'));const errors=[];page.on('pageerror',e=>errors.push(e.message));const output=new URL('../test-results/',import.meta.url);await fs.mkdir(output,{recursive:true});
 const views=['/strategy?category=stocks','/strategy?category=metals','/strategy?category=major','/strategy?category=alt','/ai-strategy?tab=ma','/ai-strategy?tab=supertrend','/ai-strategy?tab=volume','/discover?tab=daily_record','/discover?tab=article','/discover?tab=tutorial','/data','/data/smart-money-v1','/data/smart-money-v1?tab=kol','/data/volume-monitor','/data/three-indicator-resonance','/account'];
 try{
 for(let i=0;i<views.length;i++){await page.goto(origin+views[i]);await page.locator('main').waitFor();assert.equal(await page.locator('.error-panel').count(),0,views[i]);await page.waitForTimeout(100);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'desktop overflow '+views[i]);await page.screenshot({path:new URL(`${String(i+1).padStart(2,'0')}-desktop.png`,output).pathname,fullPage:false})}console.log('PASS: all 16 desktop views');
