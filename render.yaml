@@ -28,3 +28,5 @@ services:
         value: "60"
       - key: MARKET_MIN_QUOTE_VOLUME
         value: "1000000"
+      - key: MARKET_EXCHANGE
+        value: okx

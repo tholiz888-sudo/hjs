@@ -40,7 +40,7 @@ PORT=5173 npm start
 
 行情页面默认实时模式：后端启动后自动采集，页面每10秒读取结果。连接失败时会显示原因和重试时间，不自动用历史数据替代。历史模式可手动选择 `data/snapshot.json` 和 `data/charts-snapshot.json` 中的数据。KOL与人工内容仍为历史快照。
 
-服务启动后由自己的后端自动请求 `https://fapi.binance.com`，无需交易所API Key；登录本地账号后也可以手动刷新：
+服务启动后由自己的后端自动请求交易所的公开行情接口，默认OKX，可通过 `MARKET_EXCHANGE=binance` 显式选择Binance；无需交易所API Key，登录本地账号后也可以手动刷新：
 
 - 只读取USDT永续合约，按24小时成交额选择交易对。
 - 默认扫描前20个，设置 `MARKET_SYMBOL_LIMIT=200` 可扩大到200个。
@@ -50,7 +50,7 @@ PORT=5173 npm start
 - 后台默认每60秒采集，页面每10秒读取结果；K线尚未收盘时复用已验证缓存，有新K线时增量补采。后台与手动刷新共享任务，避免多用户重复扫描。扫描失败保留明确错误和原来的采集时间，不自动生成模拟行情。
 - 确定的默认筛选阈值及不确定项见 `docs/algorithm-notes.md`。
 
-**当前开发环境外部阻塞：Binance返回HTTP 451，提示运行地区不符合其访问条件。** 自动连接器已实现，但此开发环境未通过真实行情端到端验证。线上状态以 `/api/market/status` 的 `ready`、`stale`、`errorCode` 和 `updatedAt` 为准。不要绕过地区限制；需在Binance允许的运行环境验证。网络设置草稿已加入 `fapi.binance.com`，网络域名放行本身不能解决交易所地区限制。
+**已确认的原始阻塞：Binance在当前开发环境及先前Render部署返回HTTP451地区限制。当前版本增加OKX并默认选择OKX。** 两种数据源的自动连接器已实现，OKX的实际上线可用性需检查服务状态，不能仅凭单元测试宣称成功。线上状态以 `/api/market/status` 的 `ready`、`stale`、`errorCode` 和 `updatedAt` 为准。不要绕过地区限制；需在Binance允许的运行环境验证。网络设置草稿已加入 `fapi.binance.com`，网络域名放行本身不能解决交易所地区限制。
 
 ## 保存和持久化
 
@@ -75,3 +75,5 @@ npm run test:e2e
 验证覆盖：EMA/MACD参考样本递推、ATR缺口、趋势因果性、放量基线、TD重置、账号隔离、积分事务、数据源标识、16个桌面/手机视图与主要浏览器操作。外部Binance行情受451阻塞，未列为通过。
 
 自动行情、缓存、错误退避及Render休眠说明见 [部署文档](docs/deployment.md#后台自动行情)。新增 `npm run test:live-ui` 检查受控测试数据下的自动到达、价格刷新、过期提示与断线状态；它不代表外部Binance已连接。
+
+OKX接入细节见 [切换交易所](docs/deployment.md#切换交易所)：使用基础币成交量及实际USDT成交额，按数据源隔离缓存。OKX账户多空比尚未接入，明确显示不支持；不会把Binance值或历史快照冒充OKX。

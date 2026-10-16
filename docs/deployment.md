@@ -71,3 +71,15 @@ Render已有服务需要先部署包含 `scripts/start.mjs` 的最新提交。�
 - Render免费实例休眠期间，后台任务也暂停。唤醒后会恢复采集，但这不是24小时持续采集方案；长期运行需要用户自行选择不休眠的部署资源，并确认费用。
 
 检查真实线上状态：打开服务网址下的 `/api/market/status`。`automatic:true`表示后台定时任务已启用；只有 `ready:true`、`stale:false` 且 `updatedAt`持续变化，才能认为实时行情已接通。`/api/health`健康并不代表交易所连接成功。
+
+## 切换交易所
+
+当前版本默认使用OKX公开USDT永续合约数据，`MARKET_EXCHANGE=okx`；设置为 `binance` 可显式切回Binance。不会在失败时静默切换数据源。账号、交易API Key和交易权限均不需要。
+
+OKX适配使用 `https://www.okx.com/api/v5/public/instruments`、`/api/v5/market/tickers` 和 `/api/v5/market/candles`。按时间戳分页取得最多700根K线，排除 `confirm=0` 的未收盘记录。成交量采用基础币数量，USDT成交额采用接口实际的 `volCcyQuote`，不把合约张数当作USDT成交额。
+
+OKX币种排序使用24小时基础币成交量乘最新价的成交额估算值；其排序和Binance的实际24小时USDT成交额可能不同。价格、币种池、指标信号与原站不能据此宣称完全一致。
+
+缓存按数据源隔离：不会把原来Binance缓存标为OKX实时数据。OKX账户多空比尚未接入，因此该页会显示不支持提示，不会生成假的账户占比。
+
+请以实际线上 `/api/market/status` 的 `source`、`ready` 和时间戳判断是否接通。适配器及单元测试通过，不等同于上游已实际连接。
