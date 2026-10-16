@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-3020}:3020"
+    environment:
+      PORT: "3020"
+      DB_PATH: /var/lib/jiange/app.sqlite
+      COOKIE_SECURE: "${COOKIE_SECURE:-0}"
+      MARKET_SYMBOL_LIMIT: "${MARKET_SYMBOL_LIMIT:-20}"
+    volumes:
+      - jiange-data:/var/lib/jiange
+volumes:
+  jiange-data:

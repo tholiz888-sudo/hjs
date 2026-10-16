@@ -1,0 +1,23 @@
+# Free online preview. No persistent disk: local account data can reset.
+services:
+  - type: web
+    name: jiange-preview
+    runtime: node
+    plan: free
+    buildCommand: npm ci --no-audit --no-fund && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      - key: DB_PATH
+        value: /tmp/jiange/app.sqlite
+      - key: COOKIE_SECURE
+        value: "1"
+      - key: MARKET_SYMBOL_LIMIT
+        value: "20"
