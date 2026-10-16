@@ -51,5 +51,5 @@ export function createBusiness({db,snapshot,today,fail,body,json,administrator,i
  else if(p==='/api/admin/notifications'&&method==='POST'){const title=text(b.title,150),content=text(b.content),topic=b.topic||'general',audience=b.audience||'subscribers';if(!title||!content||!['general','content','strategy','ma','supertrend','volume'].includes(topic)||!['all','subscribers'].includes(audience))fail('请填写有效通知内容与接收范围');data=transaction(()=>{const sent=deliver({title,content,topic,audience});audit(actor,'send-inbox','site',{title,topic,audience,sent});return{sent,emailSent:0,telegramSent:0}})}
  else if(p==='/api/admin/audit'&&method==='GET')data={items:db.prepare('SELECT a.*,u.email FROM admin_audit a LEFT JOIN users u ON u.id=a.actor ORDER BY a.id DESC LIMIT 100').all()};
  else fail('管理接口不存在或方法不支持',404);json(res,data);return true}
- return{setting,preference,listPosts,getPost,checkin,checkinStatus,redeem,adminRoute,stamp,ledger};
+ return{setting,preference,listPosts,getPost,checkin,checkinStatus,redeem,adminRoute,stamp,ledger,audit,deliver};
 }

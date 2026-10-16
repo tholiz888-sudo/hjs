@@ -14,7 +14,8 @@
     "test:e2e": "node tests/browser.mjs",
     "test:live-ui": "node tests/live-browser.mjs",
     "test:admin-ui": "node tests/business-browser.mjs",
-    "test:account-ui": "node tests/account-browser.mjs"
+    "test:account-ui": "node tests/account-browser.mjs",
+    "test:strategy-ui": "node tests/strategy-browser.mjs"
   },
   "engines": {
     "node": ">=24"

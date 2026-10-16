@@ -6,6 +6,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {randomBytes,scryptSync,timingSafeEqual,createHash} from 'node:crypto';
 import {createMarket} from './market.mjs';
 import {createAccounts,encodePassword,passwordMatches} from './accounts.mjs';
+import {createStrategies} from './strategies.mjs';
 import {createBusiness} from './business.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const snapshot=JSON.parse(fs.readFileSync(path.join(root,'data/snapshot.json'),'utf8'));
@@ -28,6 +29,7 @@ const accountToday=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai'
 const admins=new Set(String(adminEmails).split(',').map(e=>e.trim().toLowerCase()).filter(Boolean));
 const business=createBusiness({db,snapshot,today:accountToday,fail,body,json,administrator,isAdminEmail:email=>admins.has(email),enrichUser:u=>accounts.enrich(u)});
 const accounts=createAccounts({db,fail,body,json,signed,session,viewUser,day:accountToday,now:clock,sendMail});
+const strategies=createStrategies({db,snapshot,fail,body,json,administrator,audit:business.audit,deliver:business.deliver,now:clock});
 // Explicit owner-controlled bootstrap survives replacement of an ephemeral database.
 if(adminPassword){const email=[...admins][0];if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||adminPassword.length<12||adminPassword.length>128)throw new Error('设置ADMIN_PASSWORD时，ADMIN_EMAILS首个邮箱必须有效，密码须为12–128位');const existing=db.prepare('SELECT * FROM users WHERE email=?').get(email);const markerMatches=passwordMatches(adminPassword,existing?.bootstrap_marker);if(existing&&!existing.bootstrap_marker&&passwordMatches(adminPassword,existing.password)){db.prepare('UPDATE users SET bootstrap_marker=? WHERE id=?').run(existing.password,existing.id)}else if(!markerMatches){const encoded=encodePassword(adminPassword);if(existing){db.prepare("UPDATE users SET password=?,bootstrap_marker=?,password_changed_at='' WHERE id=?").run(encoded,encoded,existing.id);db.prepare('DELETE FROM sessions WHERE user_id=?').run(existing.id)}else db.prepare('INSERT INTO users(id,email,password,nickname,bootstrap_marker,created) VALUES(?,?,?,?,?,?)').run(randomBytes(12).toString('hex'),email,encoded,'站点管理员',encoded,business.stamp())}}
 
@@ -44,6 +46,7 @@ async function body(req){let data='';for await(const c of req){data+=c;if(Buffer
 function signed(req){const u=user(req);if(!u)fail('请先登录本地账号',401);return u}
 const api=async(req,res,url)=>{const p=url.pathname,method=req.method;if(method!=='GET'&&method!=='HEAD'){const origin=req.headers.origin;if(req.headers['sec-fetch-site']==='cross-site'||origin&&new URL(origin).host!==req.headers.host)fail('请求来源不匹配',403)}
 if(await accounts.route(req,res,url))return;
+if(await strategies.route(req,res,url))return;
 if(await business.adminRoute(req,res,url))return;
 if(p==='/api/admin/market'&&method==='GET'){administrator(req);return json(res,{settings,status:market.status(),switching})}
 if(p==='/api/admin/market'&&method==='PUT'){administrator(req);const b=await body(req);if(!['okx','binance'].includes(b.exchange))fail('请选择 Binance 或 OKX');const count=String(b.symbolLimit);if(count!=='all'&&(!/^\d+$/.test(count)||Number(count)<1||Number(count)>2000))fail('扫描数量应为1–2000或all');if(switching)fail('正在切换数据源，请稍后重试',409);switching=true;try{await market.stop();const previous=settings;settings={exchange:b.exchange,symbolLimit:count==='all'?'all':Number(count)};try{const replacement=makeMarket();db.prepare("INSERT INTO site_settings(key,payload) VALUES('market',?) ON CONFLICT(key) DO UPDATE SET payload=excluded.payload").run(JSON.stringify(settings));market=replacement}catch(error){settings=previous;market=makeMarket();if(autoMarket)market.start();throw error}if(autoMarket)market.start();return json(res,{settings,status:market.status(),message:'数据源已保存，全站实时页面将使用该交易所；连接失败会明确提示，不会自动混用其他交易所。'})}finally{switching=false}}
@@ -69,7 +72,7 @@ if(p==='/api/points'&&method==='GET'){const u=signed(req);return json(res,{balan
 if(p==='/api/notifications'&&method==='GET'){const u=signed(req);return json(res,{items:db.prepare('SELECT id,title,body,topic,created,read_at FROM inbox WHERE user_id=? ORDER BY id DESC LIMIT 100').all(u.id),unread:db.prepare("SELECT count(*) n FROM inbox WHERE user_id=? AND read_at=''").get(u.id).n})}
 if(/^\/api\/notifications\/\d+$/.test(p)&&method==='PATCH'){const u=signed(req);db.prepare('UPDATE inbox SET read_at=? WHERE id=? AND user_id=?').run(business.stamp(),Number(p.split('/').at(-1)),u.id);return json(res,{ok:true})}
 
-if(p==='/api/strategies'&&method==='GET'){const category=url.searchParams.get('category')||'stocks',adminAccess=!!viewUser(user(req))?.isAdmin;const records=snapshot.strategies[category]||[];const items=adminAccess?records.filter(r=>r.symbol&&Array.isArray(r.targets)).map(r=>({...r,locked:false})):records;return json(res,{items,adminAccess,unavailableCount:adminAccess?records.length-items.length:0,source:'reference-snapshot',capturedAt:snapshot.capturedAt,vipOnly:category==='metals'&&!adminAccess})}
+if(p==='/api/strategies'&&method==='GET'){const u=user(req);return json(res,strategies.publicData(url.searchParams.get('category')||'stocks',u,!!viewUser(u)?.isAdmin))}
 if(p==='/api/market/tickers'&&method==='GET')return json(res,{items:live().tickers,source:market.status().source,updatedAt:market.status().updatedAt,status:market.status()});
 if(p==='/api/market/status'&&method==='GET')return json(res,market.status());
 if(p==='/api/market/sync'&&method==='POST'){signed(req);try{await market.sync();return json(res,market.status())}catch(e){return json(res,{...market.status(),error:e.message},503)}}
