@@ -50,3 +50,9 @@ Render的GitHub授权只能由用户在平台上完成，不需要把GitHub或Re
 - Binance在当前运行地区返回HTTP451，部署本身不保证解决；需在交易所允许的地区正常验证。
 - 不上传本地演示数据库、原站登录凭据或浏览器会话。部署包会排除这些文件。
 - Docker配置已准备，但当前云环境容器构建受DNS解析失败阻挡，镜像未构建成功。推荐的Render原生Node部署不使用Docker；原生安装、构建与生产启动已在开发环境验证。
+
+## 启动时提示缺少前端页面
+
+新版 `npm start` 会检查 `dist/index.html`；缺少时先自动执行Vite构建，成功后才启动后端。Vite列为生产依赖，即使平台使用 `npm ci --omit=dev` 也能构建。如果构建失败，启动流程会退出并保留错误日志，而不会把缺少前端的服务当作已上线。
+
+Render已有服务需要先部署包含 `scripts/start.mjs` 的最新提交。若Start Command曾手动设置为 `node server/index.mjs`，请改为 `npm start` 才会执行这个自动构建流程。
