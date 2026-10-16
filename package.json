@@ -13,7 +13,8 @@
     "test": "node --test tests/*.test.mjs",
     "test:e2e": "node tests/browser.mjs",
     "test:live-ui": "node tests/live-browser.mjs",
-    "test:admin-ui": "node tests/business-browser.mjs"
+    "test:admin-ui": "node tests/business-browser.mjs",
+    "test:account-ui": "node tests/account-browser.mjs"
   },
   "engines": {
     "node": ">=24"
