@@ -77,3 +77,5 @@ npm run test:e2e
 自动行情、缓存、错误退避及Render休眠说明见 [部署文档](docs/deployment.md#后台自动行情)。新增 `npm run test:live-ui` 检查受控测试数据下的自动到达、价格刷新、过期提示与断线状态；它不代表外部Binance已连接。
 
 OKX接入细节见 [切换交易所](docs/deployment.md#切换交易所)：使用基础币成交量及实际USDT成交额，按数据源隔离缓存。OKX账户多空比尚未接入，明确显示不支持；不会把Binance值或历史快照冒充OKX。
+
+新增信号提醒、声音/桌面通知及 OKX 收盘K线实时更新的使用与限制见 [信号提醒说明](docs/signal-alerts.md)。
