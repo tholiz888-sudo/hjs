@@ -1,0 +1,5 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createRequestBudget} from '../server/request-budget.mjs';
+test('rolling request budget accounts for candle weights and waits until expiry',async()=>{let clock=0;const delays=[];const budget=createRequestBudget({weightPerMinute:10,now:()=>clock,wait:async ms=>{delays.push(ms);clock+=ms}});await budget.take('/fapi/v1/klines?limit=1000');await budget.take('/fapi/v1/klines?limit=1000');assert.deepEqual(delays,[]);await budget.take('/fapi/v1/klines?limit=10');assert.deepEqual(delays,[60001]);assert.equal(clock,60001)});
+test('ratio and candle quotas operate independently and cancellation stops queued work',async()=>{let release;const controller=new AbortController();const budget=createRequestBudget({ratiosPerFiveMinutes:1,wait:()=>new Promise(r=>release=r)});await budget.take('/futures/data/globalLongShortAccountRatio');const blocked=budget.take('/futures/data/globalLongShortAccountRatio',{signal:controller.signal});await new Promise(setImmediate);await budget.take('/fapi/v1/klines?limit=1000');controller.abort();release();await assert.rejects(blocked,e=>e.code==='ABORTED')});
