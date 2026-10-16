@@ -7,3 +7,5 @@ export function parseBinanceResponse({status,body,headers='',now=Date.now()}){
  if(data===undefined)throw new MarketError(`Binance响应格式异常（HTTP ${status}）`,'INVALID_RESPONSE');
  if(status<200||status>=300||data?.code<0)throw new MarketError(`Binance请求失败（HTTP ${status}）`,'UPSTREAM_ERROR');return data;
 }
+
+export function binanceResponseMetadata({path,status,headers='',now=Date.now()}){const weights={};for(const match of String(headers).matchAll(/^x-mbx-used-weight(?:-(\d+[smhd]))?:\s*(\d+)\s*$/gim))weights[match[1]?.toLowerCase()||'unspecified']=Number(match[2]);return{at:new Date(now).toISOString(),endpoint:new URL(path,'https://internal.invalid').pathname,httpStatus:status,usedWeight:weights}}
