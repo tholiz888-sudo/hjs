@@ -51,7 +51,7 @@ function user(req){const cookie=(req.headers.cookie||'').split(';').map(x=>x.tri
 function session(res,id){const token=randomBytes(32).toString('hex');db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(hash(token),id,Date.now()+7*86400000);res.setHeader('Set-Cookie',`jiange_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=604800${process.env.COOKIE_SECURE==='1'?'; Secure':''}`)}
 function fail(message,status=400){throw Object.assign(new Error(message),{status})}
 function json(res,data,status=200){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(data))}
-async function body(req){let data='';for await(const c of req){data+=c;if(Buffer.byteLength(data)>(req.url?.split('?')[0]==='/api/profile/avatar'?3*1024*1024:131072))fail('提交内容过长',413)}try{return data?JSON.parse(data):{}}catch{fail('无效请求内容')}}
+async function body(req){let data='';for await(const c of req){data+=c;if(Buffer.byteLength(data)>((req.url?.split('?')[0]==='/api/profile/avatar'||/^\/api\/membership\/orders\/[a-f0-9]+\/submit$/.test(req.url?.split('?')[0]))?3*1024*1024:131072))fail('提交内容过长',413)}try{return data?JSON.parse(data):{}}catch{fail('无效请求内容')}}
 function signed(req){const u=user(req);if(!u)fail('请先登录本地账号',401);return u}
 const api=async(req,res,url)=>{const p=url.pathname,method=req.method;if(method!=='GET'&&method!=='HEAD'){const origin=req.headers.origin;if(req.headers['sec-fetch-site']==='cross-site'||origin&&new URL(origin).host!==req.headers.host)fail('请求来源不匹配',403)}
 if(await operations.route(req,res,url))return;
