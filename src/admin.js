@@ -1,5 +1,5 @@
 import {esc,date,link,empty,button} from './ui.js';
-const sections=[['overview','运营概览'],['operations','会员与服务'],['posts','发现内容'],['strategies','手动策略'],['strategy-import','策略采集'],['users','用户管理'],['points','积分流水'],['settings','积分与站点设置'],['notifications','推送管理'],['feedback','用户反馈'],['comments','评论管理'],['audit','操作记录'],['market','行情数据']];
+const sections=[['overview','运营概览'],['operations','会员与服务'],['orders','会员订单'],['posts','发现内容'],['strategies','手动策略'],['strategy-import','策略采集'],['users','用户管理'],['points','积分流水'],['settings','积分与站点设置'],['notifications','推送管理'],['feedback','用户反馈'],['comments','评论管理'],['audit','操作记录'],['market','行情数据']];
 const categories=[['daily_record','每日战绩'],['article','文章'],['tutorial','教学']];
 const strategyCategories=[['stocks','美股合约策略'],['metals','贵金属油策略'],['major','大饼以太策略'],['alt','主流合约策略']];
 const topics=[['content','发现内容'],['strategy','策略'],['ma','均线'],['supertrend','超级趋势'],['volume','异常放量'],['inApp','站内通知'],['email','邮件通知'],['telegram','Telegram通知'],['sound','声音偏好']];

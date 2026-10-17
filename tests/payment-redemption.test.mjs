@@ -22,7 +22,7 @@ test('payment accounts are public, captured on orders, and screenshot access is 
  assert.equal((await call('/membership/orders/'+id+'/proof','GET',null,outsider)).status,403);
  const proof=await call('/membership/orders/'+id+'/proof','GET',null,reader.cookie);assert.equal(proof.status,200);assert.ok(proof.data.length>12);assert.match(proof.cache,/no-store/);
  assert.equal((await call('/membership/orders/'+id+'/proof','GET',null,owner)).status,200);
- const order=(await call('/admin/operations','GET',null,owner)).data.orders[0];assert.equal(order.proofUrl,'/api/membership/orders/'+id+'/proof');assert.equal('image' in order,false);
+ const order=(await call('/admin/operations/orders','GET',null,owner)).data.items[0];assert.equal(order.proofUrl,'/api/membership/orders/'+id+'/proof');assert.equal('image' in order,false);
  assert.equal((await call('/admin/operations/orders/'+id,'PATCH',{status:'approved'},owner)).status,200);
  const id2=(await call('/membership/orders','POST',{plan:'monthly'},reader.cookie)).data.id;await call('/membership/orders/'+id2+'/submit','POST',{image},reader.cookie);
  assert.equal((await call('/admin/operations/orders/'+id2,'PATCH',{status:'approved'},owner)).status,409);
