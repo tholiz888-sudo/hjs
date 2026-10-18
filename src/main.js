@@ -59,7 +59,7 @@ async function render(){manageMarketEvents();const id=++state.renderId;const pat
 async function syncMarket(){if(state.syncing)return;if(!state.user){toast('后台会自动采集；手动刷新请先登录');authModal();return;}state.syncing=true;toast('正在读取'+exchangeName()+'已收盘K线，首次扫描可能需要一些时间');render();try{const d=await api('/market/sync',{method:'POST'});state.market=d;state.mode='live';localStorage.setItem('jiange-data-mode-v2','live');toast(`已扫描${d.symbolCount}个合约${d.error?'，部分合约读取失败':''}`)}catch(e){toast(e.message)}finally{state.syncing=false;render()}}
 async function refreshUser(){state.user=(await api('/session')).user;if(state.user){state.favorites=new Set((await api('/favorites')).symbols)}else state.favorites=new Set(JSON.parse(localStorage.getItem('jiange-guest-favorites')||'[]'))}
 const actions={...operationsUI.actions,
-'signal-sound':async()=>{await signalAlerts.toggleSound();render()},'signal-desktop':async()=>{await signalAlerts.toggleDesktop();render()},'signal-ack':()=>{signalAlerts.acknowledge();render()},
+'signal-test':async()=>{await signalAlerts.testDelivery();render()},'signal-sound':async()=>{await signalAlerts.toggleSound();render()},'signal-desktop':async()=>{await signalAlerts.toggleDesktop();render()},'signal-ack':()=>{signalAlerts.acknowledge();render()},
 ...businessAdmin.actions,
 ...accountUI.actions,
 async 'notification-read'(el){await api('/notifications/'+el.dataset.id,{method:'PATCH',body:{}});render()},

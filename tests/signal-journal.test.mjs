@@ -7,3 +7,16 @@ test('browser watch excludes initial rows, unmatched rows, expired detections an
 test('reloading or changing source does not beep for previously existing signals',()=>{const storage=memory(),now=()=>Date.parse('2026-10-16T11:00Z'),r={...row,signalId:'one',alertable:true,detectedAt:new Date(now()).toISOString()},scope={source:'okx',kind:'ma'};const a=createSignalAlerts({storage,now});a.observe([],[],scope);a.observe([r],[r],scope);const b=createSignalAlerts({storage,now,toast:()=>assert.fail('initial reload must not alert')});assert.deepEqual(b.observe([r,{...r,signalId:'two'}],[r],scope),[]);assert.deepEqual(a.observe([r],[r],{source:'binance',kind:'ma'}),[])});
 
 test('historical MACD reseeding cannot reset discovery time or manufacture a new event',()=>{let time=Date.parse('2026-10-16T11:00Z');const j=createSignalJournal({now:()=>time,onSignal:()=>assert.fail('historical recalculation must not notify')});const first=j.observe('okx','BTC',[{...row,crossAt:'2026-10-15T00:00Z'}],new Date(time).toISOString())[0];time+=300000;const revised=j.observe('okx','BTC',[{...row,at:'2026-10-16T01:05Z',crossAt:'2026-10-15T00:05Z'}],new Date(time).toISOString())[0];assert.equal(revised.signalId,first.signalId);assert.equal(revised.detectedAt,first.detectedAt)});
+
+test('test delivery activates sound after reload and surfaces failed desktop delivery',async()=>{
+ const storage=memory(),messages=[];let beeps=0;class Notice{static permission='granted';static async requestPermission(){return'granted'}static fail=false;constructor(){if(Notice.fail)throw new Error('unsupported')}}
+ const audioFactory=()=>({state:'suspended',currentTime:0,destination:{},async resume(){this.state='running'},createOscillator(){return{frequency:{},connect(){},start(){beeps++},stop(){}}},createGain(){return{gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){}}}});
+ let alerts=createSignalAlerts({storage,audioFactory,NotificationImpl:Notice,toast:m=>messages.push(m)});await alerts.toggleSound();await alerts.toggleDesktop();assert.equal(beeps,1);
+ alerts=createSignalAlerts({storage,audioFactory,NotificationImpl:Notice,toast:m=>messages.push(m)});assert.match(alerts.panel({live:true,rows:[]}),/需点击开启或测试重新激活/);assert.deepEqual(await alerts.testDelivery(),{sound:true,desktop:true});assert.equal(beeps,2);
+ Notice.fail=true;assert.deepEqual(await alerts.testDelivery(),{sound:true,desktop:false});assert.match(alerts.panel({live:true,rows:[]}),/桌面通知发送失败/);assert.match(messages.at(-1),/系统通知设置/);
+});
+test('notification permission denial and request failure are visible without unhandled errors',async()=>{
+ class Denied{static permission='denied';static async requestPermission(){return'denied'}}const messages=[];
+ const alerts=createSignalAlerts({storage:memory(),NotificationImpl:Denied,toast:m=>messages.push(m)});assert.equal(await alerts.toggleDesktop(),false);assert.match(messages.at(-1),/网站设置/);assert.match(alerts.panel({live:true,rows:[]}),/浏览器阻止/);
+ Denied.requestPermission=async()=>{throw new Error('unavailable')};assert.equal(await alerts.toggleDesktop(),false);assert.match(messages.at(-1),/无法申请通知权限/);
+});
