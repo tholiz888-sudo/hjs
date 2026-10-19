@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "node server.js",
     "start": "node server.js",
-    "check": "node --check app.js && node --check auth.js && node --check server.js && node --check functional.js && node --check market.cjs && node --check chart-math.js && node --check chart-view.js",
+    "check": "node --check app.js && node --check auth.js && node --check server.js && node --check functional.js && node --check market.cjs && node --check chart-math.js && node --check chart-view.js && node --check portal-template/content.js && node --check portal-template/template.js && node --check portal-template/editor.js",
     "test": "node --test tests/*.test.cjs"
   },
   "engines": {
