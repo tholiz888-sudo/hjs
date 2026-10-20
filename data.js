@@ -61,7 +61,7 @@ const articles=[
 ['避免将解释写成承诺','AI 可以帮助整理信息，但不能保证预测正确。发布文章时标注模型是否实际运行、输入数据的时间以及仍未验证的部分。']]]
 ].map(([slug,category,title,summary,sections])=>({slug,category,title,summary,sections:sections.map(([heading,text])=>({heading,text})),date:'2026-10-20'}));
 
-// 根据用户提供的两份网页整理；目录页只用于选题，不冒充已读取子文章。
+// 新手入门教程。
 articles.push(...[
   {
     "slug": "beginner-start",
@@ -90,19 +90,7 @@ articles.push(...[
         "text": "能否解释市价单与限价单的差别？能否区分内部划转和链上提币？能否识别谁在索取验证码或助记词？如果还不能回答，先补齐对应教程，而不是靠提高交易金额来熟悉流程。"
       }
     ],
-    "date": "2026-10-20",
-    "sources": [
-      {
-        "name": "0xNav · 新手入门系列",
-        "url": "https://www.0xnav.com/xinshou",
-        "note": "参考用户提供页面中的主题目录与简介；该文件不含六篇子文章的完整正文。"
-      },
-      {
-        "name": "币圈交易员之家 · 炒币入门教程",
-        "url": "https://cryptotradingcafe.com/experience/",
-        "note": "参考用户提供的完整指南，按本站表述重新整理；平台资格、活动与数据需核对最新官方规则。"
-      }
-    ]
+    "date": "2026-10-20"
   },
   {
     "slug": "beginner-registration",
@@ -131,19 +119,7 @@ articles.push(...[
         "text": "确认绑定邮箱、手机号、邀请关系和安全设置与预期一致，退出不认识的设备。仅通过官方入口处理失败或异常。应用应从官网引导的正规商店或经确认的官方发布渠道获取，不使用陌生人提供的安装包和共享商店账号。"
       }
     ],
-    "date": "2026-10-20",
-    "sources": [
-      {
-        "name": "0xNav · 新手入门系列",
-        "url": "https://www.0xnav.com/xinshou",
-        "note": "参考用户提供页面中的主题目录与简介；该文件不含六篇子文章的完整正文。"
-      },
-      {
-        "name": "币圈交易员之家 · 炒币入门教程",
-        "url": "https://cryptotradingcafe.com/experience/",
-        "note": "参考用户提供的完整指南，按本站表述重新整理；平台资格、活动与数据需核对最新官方规则。"
-      }
-    ]
+    "date": "2026-10-20"
   },
   {
     "slug": "beginner-buy-usdt",
@@ -176,19 +152,7 @@ articles.push(...[
         "text": "保存订单编号、双方沟通、付款凭证、数量、汇率和费用，妥善保护其中个人信息。不存在保证不冻结或不受调查的教程，更换银行卡或降低单次金额也不能消除资金来源与合规风险。"
       }
     ],
-    "date": "2026-10-20",
-    "sources": [
-      {
-        "name": "0xNav · 新手入门系列",
-        "url": "https://www.0xnav.com/xinshou",
-        "note": "参考用户提供页面中的主题目录与简介；该文件不含六篇子文章的完整正文。"
-      },
-      {
-        "name": "币圈交易员之家 · 炒币入门教程",
-        "url": "https://cryptotradingcafe.com/experience/",
-        "note": "参考用户提供的完整指南，按本站表述重新整理；平台资格、活动与数据需核对最新官方规则。"
-      }
-    ]
+    "date": "2026-10-20"
   },
   {
     "slug": "beginner-scams",
@@ -221,19 +185,7 @@ articles.push(...[
         "text": "向平台、安全服务或有关机构提供必要证据，不向“保证追回”的陌生人提交助记词或预付高额费用。链上转账通常不能由普通客服撤销；声称有万能撤回工具的人并不能因此取得信任。"
       }
     ],
-    "date": "2026-10-20",
-    "sources": [
-      {
-        "name": "0xNav · 新手入门系列",
-        "url": "https://www.0xnav.com/xinshou",
-        "note": "参考用户提供页面中的主题目录与简介；该文件不含六篇子文章的完整正文。"
-      },
-      {
-        "name": "币圈交易员之家 · 炒币入门教程",
-        "url": "https://cryptotradingcafe.com/experience/",
-        "note": "参考用户提供的完整指南，按本站表述重新整理；平台资格、活动与数据需核对最新官方规则。"
-      }
-    ]
+    "date": "2026-10-20"
   },
   {
     "slug": "beginner-spot-orders",
@@ -266,19 +218,7 @@ articles.push(...[
         "text": "对照委托和资金流水解释每一项变化，再学习止损、成本比较与风险预算。一次顺利成交只能证明操作完成，不证明买入决策正确，也不意味着应该提高交易频率。"
       }
     ],
-    "date": "2026-10-20",
-    "sources": [
-      {
-        "name": "0xNav · 新手入门系列",
-        "url": "https://www.0xnav.com/xinshou",
-        "note": "参考用户提供页面中的主题目录与简介；该文件不含六篇子文章的完整正文。"
-      },
-      {
-        "name": "币圈交易员之家 · 炒币入门教程",
-        "url": "https://cryptotradingcafe.com/experience/",
-        "note": "参考用户提供的完整指南，按本站表述重新整理；平台资格、活动与数据需核对最新官方规则。"
-      }
-    ]
+    "date": "2026-10-20"
   },
   {
     "slug": "beginner-airdrops",
@@ -292,7 +232,7 @@ articles.push(...[
       },
       {
         "heading": "确认活动来源和资格",
-        "text": "从项目与平台可交叉验证的官方渠道核对网址、时间、地区要求和任务条件。用户提供的目录提到多种活动类型，但并不能证明某个活动当前开放。本站不据此推荐特定空投，也不保证参加后获得奖励。"
+        "text": "从项目与平台可交叉验证的官方渠道核对网址、时间、地区要求和任务条件。活动类型的介绍不能证明某个活动当前开放。本站不据此推荐特定空投，也不保证参加后获得奖励。"
       },
       {
         "heading": "把实际成本列出来",
@@ -311,14 +251,7 @@ articles.push(...[
         "text": "确认领取地址、代币合约和最终分配，以实际到账为记录依据。对不再需要的权限评估撤销，记入额外网络成本。不要为了处理陌生垃圾代币而主动访问它附带的网址。"
       }
     ],
-    "date": "2026-10-20",
-    "sources": [
-      {
-        "name": "0xNav · 新手入门系列",
-        "url": "https://www.0xnav.com/xinshou",
-        "note": "参考用户提供页面中的主题目录与简介；该文件不含六篇子文章的完整正文。"
-      }
-    ]
+    "date": "2026-10-20"
   },
   {
     "slug": "beginner-risk-plan",
@@ -347,14 +280,7 @@ articles.push(...[
         "text": "核对价格时间、数据来源、活动条款和作者的推广关系。稳定币、理财或定投都不能直接写成保本或必然赚钱；平台规模和历史涨幅也不是未来兑付或回报的保证。"
       }
     ],
-    "date": "2026-10-20",
-    "sources": [
-      {
-        "name": "币圈交易员之家 · 炒币入门教程",
-        "url": "https://cryptotradingcafe.com/experience/",
-        "note": "参考用户提供的完整指南，按本站表述重新整理；平台资格、活动与数据需核对最新官方规则。"
-      }
-    ]
+    "date": "2026-10-20"
   },
   {
     "slug": "beginner-glossary",
@@ -391,20 +317,8 @@ articles.push(...[
         "text": "DeFi 通常指使用智能合约提供的金融类服务；空投指按活动规则分发代币；NFT 指具有独立标识的代币。名称描述技术或分发形式，并不说明是否安全、有价值或值得参与。"
       }
     ],
-    "date": "2026-10-20",
-    "sources": [
-      {
-        "name": "币圈交易员之家 · 炒币入门教程",
-        "url": "https://cryptotradingcafe.com/experience/",
-        "note": "参考用户提供的完整指南，按本站表述重新整理；平台资格、活动与数据需核对最新官方规则。"
-      }
-    ]
+    "date": "2026-10-20"
   }
 ]);
 
-// 用户指定的扩展阅读入口；不表示本站已审核或转载其中全部内容。
-const beginnerResources=[
- {name:'0xNav · 新手教程',url:'https://www.0xnav.com/xinshou',description:'参考其注册、买 U、钱包、防骗、交易费用与空投六个主题；上传文件包含目录与简介。'},
- {name:'CryptoTradingCafe · 经验栏目',url:'https://cryptotradingcafe.com/experience/',description:'参考上传的入门指南，整理基础概念、下单、工具与风控内容。'}
-];
-module.exports={categories,articles,beginnerResources};
+module.exports={categories,articles};
