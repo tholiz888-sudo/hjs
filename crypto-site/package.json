@@ -1,1 +1,14 @@
-{"name":"crypto-content-portal","version":"1.0.0","private":true,"engines":{"node":"24.x"},"scripts":{"start":"node server.js","dev":"node server.js","check":"node --check server.js && node --check views.js && node --check data.js && node --check services.js && node --check public/app.js","test":"node --test tests/*.test.cjs"}}
+{
+  "name": "crypto-content-portal",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "check": "node --check server.js && node --check views.js && node --check data.js && node --check services.js && node --check public/app.js && node --check news.js",
+    "test": "node --test tests/*.test.cjs"
+  }
+}

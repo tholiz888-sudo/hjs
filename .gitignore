@@ -1,1 +1,4 @@
 .local/
+
+# Collected news runtime cache
+crypto-site/storage/

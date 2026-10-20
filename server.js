@@ -1,3 +1,4 @@
+require('./crypto-site/news').startNewsCollector();
 const {handleSiteRequest}=require('./crypto-site/server.js');
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const {DatabaseSync}=require('node:sqlite');
