@@ -1,0 +1,14 @@
+const http=require('node:http'),fs=require('node:fs'),path=require('node:path');
+const {render,validURL,cfg,e}=require('./views'),{articles,categories}=require('./data'),services=require('./services');
+async function handleSiteRequest(req,res,{mountPath=''}={}){const u=new URL(req.url,'http://localhost'),p=u.pathname.slice(mountPath.length)||'/';const send=(status,body,type='text/html; charset=utf-8')=>{res.writeHead(status,{'Content-Type':type,'X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin'});res.end(body)};if(req.method!=='GET'&&req.method!=='HEAD')return send(405,'Method not allowed','text/plain');try{
+if(p==='/health')return send(200,JSON.stringify({ok:true}),'application/json');
+if(p.startsWith('/assets/')){const assets={'base.css':'base.css','site.css':'site.css','app.js':'app.js','assets/nav_fill.gif':'assets/nav_fill.gif','assets/nav_active_fill.gif':'assets/nav_active_fill.gif'};const name=assets[p.slice(8)];if(!name)return send(404,'Not found','text/plain');return send(200,fs.readFileSync(path.join(__dirname,'public',name)),name.endsWith('.css')?'text/css':name.endsWith('.js')?'text/javascript':'image/gif')}
+if(p.startsWith('/api/')){const fn=services[p.slice(5)];if(!['market','scanner','news'].includes(p.slice(5)))return send(404,'{}','application/json');res.setHeader('Cache-Control','no-store');try{return send(200,JSON.stringify(await fn()),'application/json')}catch(error){return send(503,JSON.stringify({error:error.message}),'application/json')}}
+if(p.startsWith('/go/')){const x=cfg.exchanges.find(x=>x.id===p.slice(4)),target=x&&(validURL(x.referralUrl)||validURL(x.officialUrl));if(!target)return send(404,'入口不存在');res.writeHead(302,{Location:target});return res.end()}
+const origin=validURL(process.env.SITE_URL||process.env.RENDER_EXTERNAL_URL||'')?.replace(/\/$/,'')||'';
+if(p==='/robots.txt')return send(200,`User-agent: *\nAllow: /\n${origin?'Sitemap: '+origin+mountPath+'/sitemap.xml':''}`,'text/plain');
+if(p==='/sitemap.xml'){const paths=['/','/exchanges','/market','/ai','/about','/disclosure',...categories.map(c=>'/category/'+c.id),...articles.map(a=>'/articles/'+a.slug)];return send(200,`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${paths.map(p=>`<url><loc>${e((origin||'http://localhost:'+ (process.env.PORT||3000))+mountPath+p)}</loc></url>`).join('')}</urlset>`,'application/xml')}
+const result=render(p,u.searchParams,mountPath,origin);send(result.status,result.html);
+}catch(error){console.error(error);send(500,'页面暂时无法加载，请稍后重试。')}}
+if(require.main===module)http.createServer((req,res)=>handleSiteRequest(req,res)).listen(process.env.PORT||3000,'0.0.0.0',()=>console.log('网站已启动：http://localhost:'+(process.env.PORT||3000)));
+module.exports={handleSiteRequest};
