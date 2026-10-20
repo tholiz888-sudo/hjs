@@ -19,6 +19,3 @@
 
 ## 验证
 `npm run check && npm test`。健康检查 `/health`；SEO 页面由服务端渲染，提供 sitemap.xml、robots.txt、文章 JSON-LD。Render 自动提供域名时会用于 canonical；自定义域名可设置 SITE_URL=https://你的域名。
-
-## 新手内容来源
-新增的 8 篇教程根据用户上传的 0xNav 新手目录页与 CryptoTradingCafe 入门指南重新整理。目录页只有六个主题的标题和简介，不包含子文章正文。来源链接与参考范围已标注在新增教程文末。未导入来源中的推广码、跟踪脚本、安装包链接和收益承诺；原始 HTML 不作为页面发布。首页中间的原模板内容与框架未改。
