@@ -60,4 +60,9 @@ const articles=[
 ['记录每次修改','保存提示词、代码版本、数据区间、费用假设与检验结果。模型输出可能错误，只有可重复的验证才能支持结论。'],
 ['避免将解释写成承诺','AI 可以帮助整理信息，但不能保证预测正确。发布文章时标注模型是否实际运行、输入数据的时间以及仍未验证的部分。']]]
 ].map(([slug,category,title,summary,sections])=>({slug,category,title,summary,sections:sections.map(([heading,text])=>({heading,text})),date:'2026-10-20'}));
-module.exports={categories,articles};
+// 用户指定的扩展阅读入口；不表示本站已审核或转载其中全部内容。
+const beginnerResources=[
+ {name:'0xNav · 新手教程',url:'https://www.0xnav.com/xinshou',description:'前往查看该网站的新手内容。'},
+ {name:'CryptoTradingCafe · 经验栏目',url:'https://cryptotradingcafe.com/experience/',description:'前往查看该网站的经验文章。'}
+];
+module.exports={categories,articles,beginnerResources};
