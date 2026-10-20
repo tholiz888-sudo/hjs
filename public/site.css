@@ -3,4 +3,15 @@
 
 .inner-page .center-area{padding:22px}@media(max-width:750px){.inner-page .center-area{padding:15px}}
 
-.center-area .news-content{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.9;margin:8px 0;color:#183f64}.center-area .news-important{border-left:3px solid #408ada;padding-left:12px}
+/* 财经快讯时间流；仅影响正文内的快讯列表。 */
+.center-area .news-timeline{border-left:3px solid #e4f1f7;background:#fff;margin-top:16px}
+.center-area .news-day{padding:9px 18px;background:#eef6fc;border-bottom:1px solid #e5edf3;color:#678198;font-size:12px;font-weight:600}
+.center-area .news-item{display:grid;grid-template-columns:70px minmax(0,1fr);gap:0;padding:18px 20px 18px 16px;border-bottom:1px solid #edf0f2;align-items:start}
+.center-area .news-item:nth-of-type(even){background:#f8fafb}
+.center-area .news-time{font-size:12px;line-height:24px;color:#7890a2;font-variant-numeric:tabular-nums;white-space:nowrap;padding-right:10px}
+.center-area .news-body{min-width:0;color:#193d58;font-size:14px;line-height:1.8}
+.center-area .news-headline{font-size:15px;font-weight:700;line-height:1.6;color:inherit;margin:0 0 6px}
+.center-area .news-content{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;margin:0;color:inherit}
+.center-area .news-important{border-left:0;padding-left:16px}
+.center-area .news-important .news-body,.center-area .news-important .news-time{color:#ed4057}
+@media(max-width:750px){.center-area .news-item{grid-template-columns:58px minmax(0,1fr);padding:14px 9px;gap:6px}.center-area .news-time{font-size:11px;padding-right:0}.center-area .news-body{font-size:13px}.center-area .news-headline{font-size:14px}.center-area .news-important{padding-left:9px}.center-area .news-day{padding:8px 10px}}
