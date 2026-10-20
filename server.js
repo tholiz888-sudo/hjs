@@ -10,5 +10,6 @@ if(p==='/robots.txt')return send(200,`User-agent: *\nAllow: /\n${origin?'Sitemap
 if(p==='/sitemap.xml'){const paths=['/','/exchanges','/market','/ai','/about','/disclosure',...categories.map(c=>'/category/'+c.id),...articles.map(a=>'/articles/'+a.slug)];return send(200,`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${paths.map(p=>`<url><loc>${e((origin||'http://localhost:'+ (process.env.PORT||3000))+mountPath+p)}</loc></url>`).join('')}</urlset>`,'application/xml')}
 const result=render(p,u.searchParams,mountPath,origin);send(result.status,result.html);
 }catch(error){console.error(error);send(500,'页面暂时无法加载，请稍后重试。')}}
-if(require.main===module)http.createServer((req,res)=>handleSiteRequest(req,res)).listen(process.env.PORT||3000,'0.0.0.0',()=>console.log('网站已启动：http://localhost:'+(process.env.PORT||3000)));
+if(require.main===module){require('./news').startNewsCollector();http.createServer((req,res)=>handleSiteRequest(req,res)).listen(process.env.PORT||3000,'0.0.0.0',()=>console.log('网站已启动：http://localhost:'+(process.env.PORT||3000)));
+}
 module.exports={handleSiteRequest};
