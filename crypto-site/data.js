@@ -1,4 +1,4 @@
-const categories=[{id:'exchanges',label:'交易所与返佣',description:'先了解费用与规则，再决定在哪里开户。'},{id:'beginners',label:'新手入门',description:'从账户安全、钱包基础和资金记录开始。'},{id:'market',label:'行情与速报',description:'查看可验证的市场数据，区分事实、解释与预测。'},{id:'strategies',label:'技术进阶与策略',description:'理解指标如何计算，学习检验一套交易规则。'},{id:'ai',label:'AI 与量化观察',description:'用透明的指标做筛选，不把模型输出当成收益承诺。'}];
+const categories=[{id:'exchanges',label:'交易所与返佣',description:'先了解费用与规则，再决定在哪里开户。'},{id:'beginners',label:'新手入门',description:'从账户安全、钱包基础和资金记录开始。'},{id:'market',label:'行情与速报',description:'查看可验证的市场数据，区分事实、解释与预测。'},{id:'strategies',label:'技术进阶与策略',description:'理解指标如何计算，学习检验一套交易规则。'},{id:'ai',label:'智能量化观察',description:'用透明的指标做筛选，不把模型输出当成收益承诺。'}];
 const articles=[
 ['exchange-costs','exchanges','交易所手续费怎么比较？先看这五项成本','现货、合约、Maker/Taker 与资金费率，不能只比较宣传海报上的一个数字。',[
 ['先分清你交易的产品','现货交易费、永续合约交易费、资金费率和链上提币费属于不同成本。资金费率通常是多空双方之间的定期支付，不能简单当作交易所手续费。比较之前，先统一交易产品、交易量和计费周期。'],
