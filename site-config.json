@@ -1,13 +1,50 @@
 {
-  "name":"链上研习社",
-  "tagline":"把交易工具用明白，把每一笔费用算清楚",
-  "description":"提供交易所费用对比、新手安全教程、市场观察、技术指标教学和量化筛选工具。",
-  "contact":"",
-  "social":{"telegram":"","x":"","wechat":""},
-  "exchanges":[
-    {"id":"binance","name":"Binance 币安","officialUrl":"https://www.binance.com/","referralUrl":"","code":"","discountPercent":null,"note":"费率与活动请以账户页面及官方公告为准。"},
-    {"id":"okx","name":"OKX 欧易","officialUrl":"https://www.okx.com/","referralUrl":"","code":"","discountPercent":null,"note":"不同地区、账户等级和产品的规则可能不同。"},
-    {"id":"bybit","name":"Bybit","officialUrl":"https://www.bybit.com/","referralUrl":"","code":"","discountPercent":null,"note":"开户前先确认平台是否向你的所在地区提供服务。"},
-    {"id":"bitget","name":"Bitget","officialUrl":"https://www.bitget.com/","referralUrl":"","code":"","discountPercent":null,"note":"活动奖励、折扣期限及领取条件需单独核对。"}
-  ]
+  "name": "链上研习社",
+  "tagline": "把交易工具用明白，把每一笔费用算清楚",
+  "description": "提供交易所费用对比、新手安全教程、市场观察、技术指标教学和量化筛选工具。",
+  "contact": "",
+  "social": {
+    "telegram": "",
+    "x": "",
+    "wechat": ""
+  },
+  "exchanges": [
+    {
+      "id": "binance",
+      "name": "Binance 币安",
+      "officialUrl": "https://www.binance.com/",
+      "referralUrl": "",
+      "code": "",
+      "discountPercent": null,
+      "note": "费率与活动请以账户页面及官方公告为准。"
+    },
+    {
+      "id": "okx",
+      "name": "OKX 欧易",
+      "officialUrl": "https://www.okx.com/",
+      "referralUrl": "",
+      "code": "",
+      "discountPercent": null,
+      "note": "不同地区、账户等级和产品的规则可能不同。"
+    },
+    {
+      "id": "bybit",
+      "name": "Bybit",
+      "officialUrl": "https://www.bybit.com/",
+      "referralUrl": "",
+      "code": "",
+      "discountPercent": null,
+      "note": "开户前先确认平台是否向你的所在地区提供服务。"
+    },
+    {
+      "id": "bitget",
+      "name": "Bitget",
+      "officialUrl": "https://www.bitget.com/",
+      "referralUrl": "",
+      "code": "",
+      "discountPercent": null,
+      "note": "活动奖励、折扣期限及领取条件需单独核对。"
+    }
+  ],
+  "reviewSiteUrl": "https://hjs-fqyj.onrender.com/"
 }
