@@ -1,0 +1,6 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {isMarketRoute,coalesceRequest} from '../web/src/refresh-policy.js';
+test('market polling excludes discovery, articles, account pages and admin',()=>{for(const route of ['/','/discover','/articles/1','/account','/profile','/admin','/data','/strategy/announcements'])assert.equal(isMarketRoute(route),false,route);for(const route of ['/strategy','/ai-strategy','/data/smart-money-v1','/data/volume-monitor','/data/three-indicator-resonance'])assert.equal(isMarketRoute(route),true,route)});
+test('simultaneous status consumers share one pending request, then permit a fresh refresh',async()=>{let calls=0,release;const task=coalesceRequest(async()=>{calls++;await new Promise(resolve=>{release=resolve});return calls});const a=task(),b=task();await Promise.resolve();assert.equal(calls,1);release();assert.deepEqual(await Promise.all([a,b]),[1,1]);const next=task();await Promise.resolve();assert.equal(calls,2);release();assert.equal(await next,2)});
+test('failed status calls do not permanently lock future refreshes',async()=>{let calls=0;const task=coalesceRequest(async()=>{if(++calls===1)throw Error('offline');return 'recovered'});await assert.rejects(task(),/offline/);assert.equal(await task(),'recovered')});
