@@ -1,7 +1,7 @@
 {
   "id": "{{JIANGE_BASE}}/",
-  "name": "投研看剑",
-  "short_name": "投研看剑",
+  "name": "天机看盘",
+  "short_name": "天机看盘",
   "lang": "zh-CN",
   "start_url": "{{JIANGE_BASE}}/discover",
   "scope": "{{JIANGE_BASE}}/",
