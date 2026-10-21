@@ -1,0 +1,4 @@
+const applications=new Map();
+async function createResearchHandler({mountPath='/research',navigationHTML=()=>'',dbPath=process.env.RESEARCH_DB_PATH,autoMarket=process.env.MARKET_AUTO_SYNC!=='0'}={}){const {createApplication}=await import('./research/server/index.mjs');const app=createApplication({mountPath,navigationHTML,...(dbPath?{dbPath}:{}),autoMarket});const listener=app.server.listeners('request')[0];const handler=(req,res)=>listener(req,res);handler.close=()=>app.close();handler.application=app;app.start();return handler}
+function researchHandler(base,navigationHTML){if(!applications.has(base)){const pending=createResearchHandler({mountPath:base+'/research',navigationHTML}).catch(error=>{applications.delete(base);throw error});applications.set(base,pending)}return applications.get(base)}
+module.exports={createResearchHandler,researchHandler};
