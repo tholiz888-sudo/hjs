@@ -16,6 +16,9 @@ test('authenticated journal CRUD, isolation and atomic imports',async()=>{
   const b=await req('/api/register','POST',{email:'b@example.com',password});
   const row={pair:'BTC-USDT-SWAP',direction:'多',profit:100,opened:'2026-10-01T10:00:00+08:00',closed:'2026-10-01T11:00:00+08:00',return_rate:5,entry_price:60000};
   const created=await req('/api/records','POST',row,a.cookie);assert.equal(created.status,201);
+  const nativeLogin=await req('/crypto/review/api/login','POST',{email:'a@example.com',password});assert.equal(nativeLogin.status,200);assert.match(nativeLogin.cookie,/^review_session=/);assert.equal((await req('/crypto/review/api/records','GET',null,nativeLogin.cookie)).body.records[0].profit,100);
+  const nativePage=await req('/crypto/review');assert.equal(nativePage.status,200);assert.match(nativePage.body,/src="\/crypto\/review\/app.js"/);assert.doesNotMatch(nativePage.body,/<iframe|hjs-fqyj/);
+
   assert.equal((await req('/api/records')).status,401);
   assert.equal((await req('/api/admin/users','GET',null,a.cookie)).status,403);
   assert.equal((await req('/api/records','GET',null,b.cookie)).body.records.length,0);

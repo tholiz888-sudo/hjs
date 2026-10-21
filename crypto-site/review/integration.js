@@ -1,0 +1,1 @@
+(()=>{const navigation=document.getElementById('portal-navigation');const resize=()=>document.documentElement.style.setProperty('--portal-height',navigation.offsetHeight+'px');resize();new ResizeObserver(resize).observe(navigation)})();
