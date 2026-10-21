@@ -17,3 +17,6 @@
 @media(max-width:750px){.center-area .news-item{grid-template-columns:58px minmax(0,1fr);padding:14px 9px;gap:6px}.center-area .news-time{font-size:11px;padding-right:0}.center-area .news-body{font-size:13px}.center-area .news-headline{font-size:14px}.center-area .news-important{padding-left:9px}.center-area .news-day{padding:8px 10px}}
 
 .center-area .article-resource-links{display:flex;flex-wrap:wrap;gap:10px 20px;margin:10px 0 22px}.center-area .article-resource-links a{font-size:14px}
+
+/* 复盘工具保留共享导航，内容使用全部宽度。 */
+.review-page .page-grid.review-layout{display:block}.review-page .center-area{padding:0}.center-area .review-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;background:#eef6ff;border-bottom:1px solid #bfd7eb}.center-area .review-toolbar a{font-size:12px}.center-area .review-frame{display:block;width:100%;height:calc(100dvh - 155px);min-height:620px;border:0;background:#fff}@media(max-width:750px){.center-area .review-toolbar{padding:8px 12px}.center-area .review-frame{min-height:650px}}
