@@ -3,4 +3,4 @@
 /* 每个顶部导航项左右两侧的原模板斜角，不装饰站名和整条导航。 */
 .primary-nav>a:not(.brand){position:relative;border-right:0}.primary-nav>a:not(.brand)::before,.primary-nav>a:not(.brand)::after{content:"";position:absolute;top:0;bottom:0;width:5px;background-repeat:no-repeat;background-size:100% 100%;pointer-events:none;z-index:1}.primary-nav>a:not(.brand)::before{left:0;background-image:url(assets/nav_seperator_left.gif)}.primary-nav>a:not(.brand)::after{right:0;background-image:url(assets/nav_seperator_right.gif)}
 
-.primary-nav>a.review-nav{margin-left:auto}@media(max-width:750px){.primary-nav>a.review-nav{margin-left:0}}
+.primary-nav>a.research-nav{margin-left:auto}@media(max-width:750px){.primary-nav>a.research-nav{margin-left:0}}
