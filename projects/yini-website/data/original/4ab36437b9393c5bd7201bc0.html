@@ -1,0 +1,352 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<script language="javascript">
+if(top.location.href!=self.location.href)
+{
+top.location.href=self.location.href;
+}
+var ifrs=document.getElementByTagName('iframe');
+var hostname=location.hostname,
+var i=ifrs.length;
+function clsIfr(){
+for(var j=1;j<=i;j++)
+  {
+    ifrs[i].src="about:blank";
+    ifrs[i].parentNode.removeChild(ifrs[i]);
+  }
+}
+
+clsIfr();
+window.onload=clsIfr;
+
+</script>
+
+
+
+<meta http-equiv="Content-Type" content="text/html; charset=gb2312" />
+<meta name="viewport" content="width=device-width,initial-scale=0.5,maximum-scale=0.5,minimum-scale=0.5,user-scalable=no,shrink-to-fit=no" />
+<meta name="MobileOptimized" content="321" />
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta name="HandheldFriendly" content="true" />
+<link rel="stylesheet" href="css/css.asp" />
+<style type="text/css">
+a{color:#0000ff;text-decoration:none;font-size:13px}
+a:hover{color:#000000;text-decoration:underline}
+a.nicheng:hover{color:#000000;text-decoration:none}
+body,input,textarea,td,select{font-size:13px}
+body{margin:0px}
+a.changecode{color:#000000;text-decoration:none}
+a.changecode:hover{color:#000000;text-decoration:none}
+table.liuyan{border-width:1px;border-color:#000000;border-style:dashed}
+</style>
+<script language="javascript" src="js/index.js"></script>
+<script language="javascript">
+var lastnum=0;
+var nownum=0;
+
+function changecode()
+{
+while(lastnum==nownum)
+{
+ nownum=Math.round(Math.random()*40000).toString();
+}
+
+document.images.num.src="code.asp?randomnum="+nownum;
+
+lastnum=nownum;
+}
+
+
+function preview()
+{
+var theform=document.forms.form1;
+if(yanzheng())
+{
+theform.target="_blank";
+theform.action="previewok.asp";
+theform.submit();
+theform.action="addok.asp";
+theform.target="_self";
+}
+}
+function submit2()
+{
+var theform=document.forms.form1;
+if(yanzheng())
+{
+theform.action="addok.asp";
+theform.target="_self";
+theform.submit();
+}
+}
+function yanzheng()
+{
+var theform=document.forms.form1;
+var namesize=20;
+var theminsize=8;
+var contentsize=2000;
+var thealerttext="";
+var thestr=document.forms.form1.content.value;
+
+if(trim(theform.thetitle.value).length>namesize)
+{
+thealerttext+="标题长度不可以超过20个字符!\n";
+}
+
+if(trim(theform.nicheng.value).length>namesize)
+{
+thealerttext+="昵称长度不可以超过20字符!\n";
+}
+
+if(trim(theform.nicheng.value)=="")
+{
+
+thealerttext+="昵称不可以为空!\n";
+
+}
+
+if(trim(theform.email.value)!=""&&!isEmail(trim(theform.email.value)))
+{
+
+thealerttext+="Email格式不正确!\n";
+}
+
+
+if(trim(theform.qq.value)!=""&&!isInteger(trim(theform.qq.value)))
+{
+
+thealerttext+="QQ格式不正确!\n";
+}
+
+if(trim(thestr).length<theminsize&&trim(thestr).length!=0)
+{
+
+thealerttext+="留言字数不可以低于"+theminsize+"个字符!\n";
+
+}
+
+if(trim(thestr).length>contentsize)
+{
+
+thealerttext+="留言内容不可以超过"+contentsize+",目前长度"+trim(thestr).length+"!\n";
+
+}
+if(trim(thestr)=="")
+{
+
+thealerttext+="留言内容不可以为空!\n";
+
+}
+
+if(trim(theform.num.value)=="")
+{
+
+thealerttext+="请填写验证码!\n";
+}
+if(theform.num.value.length!=4&&theform.num.value.length!=0)
+{
+thealerttext+="验证码格式不正确!\n";
+}
+
+if(thealerttext=="")
+{
+return(true);
+}
+else
+{
+alert(thealerttext);
+return(false);
+}
+
+}
+
+function tiaozhuan(n)
+{
+window.self.location.href="default.asp?page="+n;
+}
+
+function tiaozhuan2()
+{
+window.self.location.href="default.asp?page="+document.forms.tiaozhuanform.thepage.value;
+}
+
+
+function changenum()
+{
+testlength();
+var thelength=document.forms.form1.content.value.length;
+document.getElementById("thenum").innerHTML=thelength;
+if(thelength>=2000)
+{
+document.getElementById("thenum2").innerHTML="<font color=\"#ff0000\">0</font>";
+}
+else
+{
+document.getElementById("thenum2").innerHTML="<font color=\"#ff0000\">"+(2000-thelength)+"</font>";
+}
+window.setTimeout("changenum();",100);
+}
+
+function testlength()
+{
+if(document.forms.form1.content.value.length>2000)
+{
+   document.forms.form1.content.value=document.forms.form1.content.value.substring(0,2000);
+}
+}
+
+function getlength()
+{
+
+var thestr=document.forms.form1.elements.content.value;
+document.getElementById("thenum").innerHTML=thestr.length;
+
+}
+
+
+
+</script>
+<title>秘密花园留言本</title>
+</head>
+
+<body bgcolor=#FFFFFF>
+<br /><br /><table width=913 border=0 align=center><tr align=left><td align=left><img src=image/banner.jpg width=913 height=144 border=0></td></tr></table>
+<br />
+
+<table width=913 align=center border=0><tr align=center><td>
+<table width=913 border=0 align="center">
+<tr><td align="left"><strong>
+	<span style="border-style: solid; border-width: 0px">
+	<font size="2" color="#008080">秘密花园留言本于2018.8.22开放 <br>
+	</font></span></strong><br />
+<br />
+<a href="#nicheng"><img src="image/qxly.jpg" alt="签写留言" border=0 /></a>&nbsp;&nbsp;<br />
+	<strong>
+	<span style="color: #008080; border-style: solid; border-width: 0px"><br>
+	<font size="2">2021年5月28日恢复签写留言（2020年11月3日至2021年5月27日没空审核留言，非常抱歉）<br>
+	</font><br>
+	</span><font color="#FF0000" size="2">
+	<span style="border-style: solid; border-width: 0px">
+	注意：留言审核时间比较长，请耐心等待。。。。。。。。。。。。。。。。。</span></font></strong><br />
+</td></tr>
+<tr align=left><td><br>
+<table width=913 border=0 bordercolor=#000000 cellpadding=0 align=center cellpadding=0 cellspacing=0 style="border-collapse:collapse;border-width:1px;border-color:#000000;border-style:dashed"><tr><td colspan=2 style="background:#FFA042" height=34 valign=middle><table border=0 cellpadding=0 width=100% cellspacing=0><tr><td valign=middle height=34 width=613 style="padding:0px">
+<span style="color:#000000">
+&nbsp;&nbsp;标题:<strong>原来学生时代秘密花园还在</strong></span><span style="color:#FFFFFF">&nbsp;&nbsp;<strong>lili</strong></span>&nbsp;&nbsp;<span style="color:#000000">发表于2024年8月14日23时18分9秒<br></span></font></td><td height=34 align=right valign=middle style="padding:0px"><span style="margin-right:4em"><img src=image/icon_ip.gif title="183.209.*.*" border=0 align=middle></span></td></tr></table></td></tr><tr><td bgcolor=#ffffff width=16% height=40 align=center valign=middle border=1 style="border-width:0px 0px 0px 1px;border-style:dashed;border-color:#000000;"><br><img src="images/image7/1.gif" align=middle><br><br><table align=center style="width:10em;margin:1em" border=0 cellspacing=0 cellpadding=0><tr align=center><td width=100%/><span style="color:#000000"><strong>lili</strong></span></td></tr></table></td><td width=84% style="border-width:0px 1px 1px 1px;border-color:#000000;border-style:dashed" bordercolor=#000000 bgcolor=#FFD1A4 background="image/bgorange.gif" onmouseover=javascript:{this.bgColor='#FFD306'} onmouseout=javascript:{this.bgColor='#FFD1A4'}><table width=100% border=0 style="table-layout:fixed;word-wrap:break-word"><tr><td valign=middle style="padding:1em"><div style="margin:0;padding:0;overflow:auto;width:100%"<span style="color:#000000">高中时代的网站，时隔二十多年，某个晚上，我又想起来，搜一搜，居然还在，还是那个我喜欢的安静的样子，真好。</span></td></tr></table></td></tr></table><br><table width=913 border=0 bordercolor=#000000 cellpadding=0 align=center cellpadding=0 cellspacing=0 style="border-collapse:collapse;border-width:1px;border-color:#000000;border-style:dashed"><tr><td colspan=2 style="background:#FFA042" height=34 valign=middle><table border=0 cellpadding=0 width=100% cellspacing=0><tr><td valign=middle height=34 width=613 style="padding:0px">
+<span style="color:#000000">
+&nbsp;&nbsp;标题:<strong>无标题</strong></span><span style="color:#FFFFFF">&nbsp;&nbsp;<strong>访客</strong></span>&nbsp;&nbsp;<span style="color:#000000">发表于2024年8月14日21时58分14秒<br></span></font></td><td height=34 align=right valign=middle style="padding:0px"><span style="margin-right:4em"><img src=image/icon_ip.gif title="117.151.*.*" border=0 align=middle></span></td></tr></table></td></tr><tr><td bgcolor=#ffffff width=16% height=40 align=center valign=middle border=1 style="border-width:0px 0px 0px 1px;border-style:dashed;border-color:#000000;"><br><img src="images/image7/9.gif" align=middle><br><br><table align=center style="width:10em;margin:1em" border=0 cellspacing=0 cellpadding=0><tr align=center><td width=100%/><span style="color:#000000"><strong>访客</strong></span></td></tr></table></td><td width=84% style="border-width:0px 1px 1px 1px;border-color:#000000;border-style:dashed" bordercolor=#000000 bgcolor=#FFD1A4 background="image/bgorange.gif" onmouseover=javascript:{this.bgColor='#FFD306'} onmouseout=javascript:{this.bgColor='#FFD1A4'}><table width=100% border=0 style="table-layout:fixed;word-wrap:break-word"><tr><td valign=middle style="padding:1em"><div style="margin:0;padding:0;overflow:auto;width:100%"<span style="color:#000000">这个网站是我2000年第一次接触互联网登录的第一个网站，如今居然依然还在。<br>时间真是个奇妙和残酷的概念，人生在时光面前真是不值得一提。</span></td></tr></table></td></tr></table><br><table width=913 border=0 bordercolor=#000000 cellpadding=0 align=center cellpadding=0 cellspacing=0 style="border-collapse:collapse;border-width:1px;border-color:#000000;border-style:dashed"><tr><td colspan=2 style="background:#FFA042" height=34 valign=middle><table border=0 cellpadding=0 width=100% cellspacing=0><tr><td valign=middle height=34 width=613 style="padding:0px">
+<span style="color:#000000">
+&nbsp;&nbsp;标题:<strong>无标题</strong></span><span style="color:#FFFFFF">&nbsp;&nbsp;<strong>访客</strong></span>&nbsp;&nbsp;<span style="color:#000000">发表于2024年8月14日18时45分3秒<br></span></font></td><td height=34 align=right valign=middle style="padding:0px"><span style="margin-right:4em"><img src=image/icon_ip.gif title="60.209.*.*" border=0 align=middle></span></td></tr></table></td></tr><tr><td bgcolor=#ffffff width=16% height=40 align=center valign=middle border=1 style="border-width:0px 0px 0px 1px;border-style:dashed;border-color:#000000;"><br><img src="images/image7/1.gif" align=middle><br><br><table align=center style="width:10em;margin:1em" border=0 cellspacing=0 cellpadding=0><tr align=center><td width=100%/><span style="color:#000000"><strong>访客</strong></span></td></tr></table></td><td width=84% style="border-width:0px 1px 1px 1px;border-color:#000000;border-style:dashed" bordercolor=#000000 bgcolor=#FFD1A4 background="image/bgorange.gif" onmouseover=javascript:{this.bgColor='#FFD306'} onmouseout=javascript:{this.bgColor='#FFD1A4'}><table width=100% border=0 style="table-layout:fixed;word-wrap:break-word"><tr><td valign=middle style="padding:1em"><div style="margin:0;padding:0;overflow:auto;width:100%"<span style="color:#000000">上月开始，一直在找像“雨后池塘”网站一样的唯美网站，来到“秘密花园”后突然发现我十几年前就来过的，当时雨后池塘里一个蛙友推荐给我的，现在才发现我之前居然忘记她的名字。内心深处，我最爱的应该就是这种网站了吧，那么干净唯美，一尘不染，总能让人放松、平静。今天起，再也不会忘记秘密花园！感恩。</span></td></tr></table></td></tr></table><br><table width=913 border=0 bordercolor=#000000 cellpadding=0 align=center cellpadding=0 cellspacing=0 style="border-collapse:collapse;border-width:1px;border-color:#000000;border-style:dashed"><tr><td colspan=2 style="background:#FFA042" height=34 valign=middle><table border=0 cellpadding=0 width=100% cellspacing=0><tr><td valign=middle height=34 width=613 style="padding:0px">
+<span style="color:#000000">
+&nbsp;&nbsp;标题:<strong>无标题</strong></span><span style="color:#FFFFFF">&nbsp;&nbsp;<strong>访客</strong></span>&nbsp;&nbsp;<span style="color:#000000">发表于2024年8月14日16时42分48秒<br></span></font></td><td height=34 align=right valign=middle style="padding:0px"><span style="margin-right:4em"><img src=image/icon_ip.gif title="219.142.*.*" border=0 align=middle></span></td></tr></table></td></tr><tr><td bgcolor=#ffffff width=16% height=40 align=center valign=middle border=1 style="border-width:0px 0px 0px 1px;border-style:dashed;border-color:#000000;"><br><img src="images/image7/1.gif" align=middle><br><br><table align=center style="width:10em;margin:1em" border=0 cellspacing=0 cellpadding=0><tr align=center><td width=100%/><span style="color:#000000"><strong>访客</strong></span></td></tr></table></td><td width=84% style="border-width:0px 1px 1px 1px;border-color:#000000;border-style:dashed" bordercolor=#000000 bgcolor=#FFD1A4 background="image/bgorange.gif" onmouseover=javascript:{this.bgColor='#FFD306'} onmouseout=javascript:{this.bgColor='#FFD1A4'}><table width=100% border=0 style="table-layout:fixed;word-wrap:break-word"><tr><td valign=middle style="padding:1em"><div style="margin:0;padding:0;overflow:auto;width:100%"<span style="color:#000000">在不经意间，我想起了这个域名，它是我记忆中的一块瑰宝，如同五笔字根一样，不需思索即可流畅地打出。惊喜地发现，这个网站依然存在，它让我感觉仿佛从2024年穿越回了20多年前，那时我还是个充满梦想的中二少年，生活在一个ADSL尚未完全取代56K猫的时代，如今已是而立之年。<br><br>有很多话想表达，但似乎又难以言尽（毕竟上班摸鱼…）。我提四个祝福吧。<br>1）祝福网站的主人，因为这个时代，情怀和坚持是如此难能可贵。<br>2）祝福所有像我一样怀旧的人，因为这个时代，缘分和邂逅同样充满了美好。<br>3）祝福经意或不经意来此的年轻人，因为这个时代，终归是你们的。<br>4）最后也祝福自己，愿我能翻越人生中的每一座山丘，始终保持初心，不断砥砺前行。<br><br>dimens****@qq.com，也留下一个邮箱，车马很慢，邮路漫长。愿我们都能在这个数字时代找到那份独特的连接，就像这个网站一样，成为跨越时间的温暖桥梁。</span></td></tr></table></td></tr></table><br><table width=913 border=0 bordercolor=#000000 cellpadding=0 align=center cellpadding=0 cellspacing=0 style="border-collapse:collapse;border-width:1px;border-color:#000000;border-style:dashed"><tr><td colspan=2 style="background:#FFA042" height=34 valign=middle><table border=0 cellpadding=0 width=100% cellspacing=0><tr><td valign=middle height=34 width=613 style="padding:0px">
+<span style="color:#000000">
+&nbsp;&nbsp;标题:<strong>又来了</strong></span><span style="color:#FFFFFF">&nbsp;&nbsp;<strong>明月楼</strong></span>&nbsp;&nbsp;<span style="color:#000000">发表于2024年8月14日12时8分40秒<br></span></font></td><td height=34 align=right valign=middle style="padding:0px"><span style="margin-right:4em"><img src=image/icon_ip.gif title="116.25.*.*" border=0 align=middle></span></td></tr></table></td></tr><tr><td bgcolor=#ffffff width=16% height=40 align=center valign=middle border=1 style="border-width:0px 0px 0px 1px;border-style:dashed;border-color:#000000;"><br><img src="images/image7/10.gif" align=middle><br><br><table align=center style="width:10em;margin:1em" border=0 cellspacing=0 cellpadding=0><tr align=center><td width=100%/><span style="color:#000000"><strong>明月楼</strong></span></td></tr></table></td><td width=84% style="border-width:0px 1px 1px 1px;border-color:#000000;border-style:dashed" bordercolor=#000000 bgcolor=#FFD1A4 background="image/bgorange.gif" onmouseover=javascript:{this.bgColor='#FFD306'} onmouseout=javascript:{this.bgColor='#FFD1A4'}><table width=100% border=0 style="table-layout:fixed;word-wrap:break-word"><tr><td valign=middle style="padding:1em"><div style="margin:0;padding:0;overflow:auto;width:100%"<span style="color:#000000">2000年的时候来过本站，没想到时隔24年，又一次来了，真是感慨光阴荏苒，世间变幻，还好有些事物长久存在。</span></td></tr></table></td></tr></table><br><table width=913 border=0 bordercolor=#000000 cellpadding=0 align=center cellpadding=0 cellspacing=0 style="border-collapse:collapse;border-width:1px;border-color:#000000;border-style:dashed"><tr><td colspan=2 style="background:#FFA042" height=34 valign=middle><table border=0 cellpadding=0 width=100% cellspacing=0><tr><td valign=middle height=34 width=613 style="padding:0px">
+<span style="color:#000000">
+&nbsp;&nbsp;标题:<strong>无标题</strong></span><span style="color:#FFFFFF">&nbsp;&nbsp;<strong>未名</strong></span>&nbsp;&nbsp;<span style="color:#000000">发表于2024年8月14日9时40分12秒<br></span></font></td><td height=34 align=right valign=middle style="padding:0px"><span style="margin-right:4em"><img src=image/icon_ip.gif title="120.203.*.*" border=0 align=middle></span></td></tr></table></td></tr><tr><td bgcolor=#ffffff width=16% height=40 align=center valign=middle border=1 style="border-width:0px 0px 0px 1px;border-style:dashed;border-color:#000000;"><br><img src="images/image7/7.gif" align=middle><br><br><table align=center style="width:10em;margin:1em" border=0 cellspacing=0 cellpadding=0><tr align=center><td width=100%/><span style="color:#000000"><strong>未名</strong></span></td></tr></table></td><td width=84% style="border-width:0px 1px 1px 1px;border-color:#000000;border-style:dashed" bordercolor=#000000 bgcolor=#FFD1A4 background="image/bgorange.gif" onmouseover=javascript:{this.bgColor='#FFD306'} onmouseout=javascript:{this.bgColor='#FFD1A4'}><table width=100% border=0 style="table-layout:fixed;word-wrap:break-word"><tr><td valign=middle style="padding:1em"><div style="margin:0;padding:0;overflow:auto;width:100%"<span style="color:#000000"><font color="#39c55b">偶然发现的老网站，感觉身心都受到了洗涤。</font></span></td></tr></table></td></tr></table><br><table width=913 border=0 bordercolor=#000000 cellpadding=0 align=center cellpadding=0 cellspacing=0 style="border-collapse:collapse;border-width:1px;border-color:#000000;border-style:dashed"><tr><td colspan=2 style="background:#FFA042" height=34 valign=middle><table border=0 cellpadding=0 width=100% cellspacing=0><tr><td valign=middle height=34 width=613 style="padding:0px">
+<span style="color:#000000">
+&nbsp;&nbsp;标题:<strong>哈哈，也许这就是缘分</strong></span><span style="color:#FFFFFF">&nbsp;&nbsp;<strong>道友</strong></span>&nbsp;&nbsp;<span style="color:#000000">发表于2024年8月14日2时35分4秒<br></span></font></td><td height=34 align=right valign=middle style="padding:0px"><span style="margin-right:4em"><img src=image/icon_ip.gif title="113.72.*.*" border=0 align=middle></span></td></tr></table></td></tr><tr><td bgcolor=#ffffff width=16% height=40 align=center valign=middle border=1 style="border-width:0px 0px 0px 1px;border-style:dashed;border-color:#000000;"><br><img src="images/image7/12.gif" align=middle><br><br><table align=center style="width:10em;margin:1em" border=0 cellspacing=0 cellpadding=0><tr align=center><td width=100%/><span style="color:#000000"><strong>道友</strong></span></td></tr></table></td><td width=84% style="border-width:0px 1px 1px 1px;border-color:#000000;border-style:dashed" bordercolor=#000000 bgcolor=#FFD1A4 background="image/bgorange.gif" onmouseover=javascript:{this.bgColor='#FFD306'} onmouseout=javascript:{this.bgColor='#FFD1A4'}><table width=100% border=0 style="table-layout:fixed;word-wrap:break-word"><tr><td valign=middle style="padding:1em"><div style="margin:0;padding:0;overflow:auto;width:100%"<span style="color:#000000">站主大大，您好啊。我是因自己想为注册个域名而来到这里。没成想到这是一个时光的自留地。谢谢您的坚持让大伙都能在这里心灵都得到舒缓，给时光留一个印记。我希望这个地方能一直存在。<br>我是一个29岁的男生，经历过三年初恋异地的失败，抑郁了三年，化悲痛为力量选择全心身投入创业。创业至今已经四年了，但是我好像还是不能很好的适应这个社会的规则和人情世故，企业也是一直不温不火。感觉是一直如履薄冰，但是我还是坚持一次又一次打碎重来的勇气。再次重新审视当前的自己，继续前行。也许某一天未来的自己再来看本次的决定，会是一种什么样的心境。当前还有一个问题困扰着我，不知道是以往的感情创伤或是经历过的磨难使自己麻木，好像再也没有单纯喜欢一个人心界，拒绝过无数次相亲局，成为别人眼中难搞的主，其实我还是信着缘分，也不知道什么时候能够遇见未来的一伴。（会不会注定没有伴的一生状态，这个也是能接受）<br></span></td></tr></table></td></tr></table><br><table width=913 border=0 bordercolor=#000000 cellpadding=0 align=center cellpadding=0 cellspacing=0 style="border-collapse:collapse;border-width:1px;border-color:#000000;border-style:dashed"><tr><td colspan=2 style="background:#FFA042" height=34 valign=middle><table border=0 cellpadding=0 width=100% cellspacing=0><tr><td valign=middle height=34 width=613 style="padding:0px">
+<span style="color:#000000">
+&nbsp;&nbsp;标题:<strong>无标题</strong></span><span style="color:#FFFFFF">&nbsp;&nbsp;<strong>玫瑰园</strong></span>&nbsp;&nbsp;<span style="color:#000000">发表于2024年8月14日1时11分59秒<br></span></font></td><td height=34 align=right valign=middle style="padding:0px"><span style="margin-right:4em"><img src=image/icon_ip.gif title="113.101.*.*" border=0 align=middle></span></td></tr></table></td></tr><tr><td bgcolor=#ffffff width=16% height=40 align=center valign=middle border=1 style="border-width:0px 0px 0px 1px;border-style:dashed;border-color:#000000;"><br><img src="images/image7/10.gif" align=middle><br><br><table align=center style="width:10em;margin:1em" border=0 cellspacing=0 cellpadding=0><tr align=center><td width=100%/><span style="color:#000000"><strong>玫瑰园</strong></span></td></tr></table></td><td width=84% style="border-width:0px 1px 1px 1px;border-color:#000000;border-style:dashed" bordercolor=#000000 bgcolor=#FFD1A4 background="image/bgorange.gif" onmouseover=javascript:{this.bgColor='#FFD306'} onmouseout=javascript:{this.bgColor='#FFD1A4'}><table width=100% border=0 style="table-layout:fixed;word-wrap:break-word"><tr><td valign=middle style="padding:1em"><div style="margin:0;padding:0;overflow:auto;width:100%"<span style="color:#000000">吴思楠，远在美国的你还好吗。<br>年中的时候，我顺道回到了那个我们曾经在一起的地方，十多年过去了，那里的一草一木都好像没有变化。可是不变的旧地，却更是令我感到难受。<br>当静静走过那熟悉的街道，多么多么希望，在转角再一次遇见你，但，我知道在分开的那一天过后，我们永世再也不可能相会了。<br>或许终会有那么一天，不想给自己的人生留下遗憾的那一天，我会越过千山万水找到你，轻轻地问候你一声：你还好吗。</span></td></tr></table></td></tr></table><br><table width=913 border=0 bordercolor=#000000 cellpadding=0 align=center cellpadding=0 cellspacing=0 style="border-collapse:collapse;border-width:1px;border-color:#000000;border-style:dashed"><tr><td colspan=2 style="background:#FFA042" height=34 valign=middle><table border=0 cellpadding=0 width=100% cellspacing=0><tr><td valign=middle height=34 width=613 style="padding:0px">
+<span style="color:#000000">
+&nbsp;&nbsp;标题:<strong>无标题</strong></span><span style="color:#FFFFFF">&nbsp;&nbsp;<strong>访客</strong></span>&nbsp;&nbsp;<span style="color:#000000">发表于2024年8月13日22时42分42秒<br></span></font></td><td height=34 align=right valign=middle style="padding:0px"><span style="margin-right:4em"><img src=image/icon_ip.gif title="58.63.*.*" border=0 align=middle></span></td></tr></table></td></tr><tr><td bgcolor=#ffffff width=16% height=40 align=center valign=middle border=1 style="border-width:0px 0px 0px 1px;border-style:dashed;border-color:#000000;"><br><img src="images/image7/10.gif" align=middle><br><br><table align=center style="width:10em;margin:1em" border=0 cellspacing=0 cellpadding=0><tr align=center><td width=100%/><span style="color:#000000"><strong>访客</strong></span></td></tr></table></td><td width=84% style="border-width:0px 1px 1px 1px;border-color:#000000;border-style:dashed" bordercolor=#000000 bgcolor=#FFD1A4 background="image/bgorange.gif" onmouseover=javascript:{this.bgColor='#FFD306'} onmouseout=javascript:{this.bgColor='#FFD1A4'}><table width=100% border=0 style="table-layout:fixed;word-wrap:break-word"><tr><td valign=middle style="padding:1em"><div style="margin:0;padding:0;overflow:auto;width:100%"<span style="color:#000000">慕名前来，看到网站的风格，又这里找回了20年前小时候的感觉</span></td></tr></table></td></tr></table><br><table width=913 border=0 bordercolor=#000000 cellpadding=0 align=center cellpadding=0 cellspacing=0 style="border-collapse:collapse;border-width:1px;border-color:#000000;border-style:dashed"><tr><td colspan=2 style="background:#FFA042" height=34 valign=middle><table border=0 cellpadding=0 width=100% cellspacing=0><tr><td valign=middle height=34 width=613 style="padding:0px">
+<span style="color:#000000">
+&nbsp;&nbsp;标题:<strong>嗨，你好</strong></span><span style="color:#FFFFFF">&nbsp;&nbsp;<strong>AA</strong></span>&nbsp;&nbsp;<span style="color:#000000">发表于2024年8月13日22时26分29秒<br></span></font></td><td height=34 align=right valign=middle style="padding:0px"><span style="margin-right:4em"><img src=image/icon_ip.gif title="58.242.*.*" border=0 align=middle></span></td></tr></table></td></tr><tr><td bgcolor=#ffffff width=16% height=40 align=center valign=middle border=1 style="border-width:0px 0px 0px 1px;border-style:dashed;border-color:#000000;"><br><img src="images/image7/10.gif" align=middle><br><br><table align=center style="width:10em;margin:1em" border=0 cellspacing=0 cellpadding=0><tr align=center><td width=100%/><span style="color:#000000"><strong>AA</strong></span></td></tr></table></td><td width=84% style="border-width:0px 1px 1px 1px;border-color:#000000;border-style:dashed" bordercolor=#000000 bgcolor=#FFD1A4 background="image/bgorange.gif" onmouseover=javascript:{this.bgColor='#FFD306'} onmouseout=javascript:{this.bgColor='#FFD1A4'}><table width=100% border=0 style="table-layout:fixed;word-wrap:break-word"><tr><td valign=middle style="padding:1em"><div style="margin:0;padding:0;overflow:auto;width:100%"<span style="color:#000000">最近，生活不是特别顺心，两个小仔，快快幸福的长大啊&#183;&#183;&#183;最近有点累，突然感觉有点无依无靠，这个世界中的我仿佛成了一座孤岛，这个魔幻的世界，变得好陌生，变化的很快，我有点跟不上节奏了。还好这个网站一直都在，似乎你还没有变，想念以前的自己了，好久都没有很潇洒的感觉了</span></td></tr></table></td></tr></table><br><table width=913 border=0 bordercolor=#000000 cellpadding=0 align=center cellpadding=0 cellspacing=0 style="border-collapse:collapse;border-width:1px;border-color:#000000;border-style:dashed"><tr><td colspan=2 style="background:#FFA042" height=34 valign=middle><table border=0 cellpadding=0 width=100% cellspacing=0><tr><td valign=middle height=34 width=613 style="padding:0px">
+<span style="color:#000000">
+&nbsp;&nbsp;标题:<strong>好喜歡</strong></span><span style="color:#FFFFFF">&nbsp;&nbsp;<strong>短褲</strong></span>&nbsp;&nbsp;<span style="color:#000000">发表于2024年8月13日20时26分54秒<br></span></font></td><td height=34 align=right valign=middle style="padding:0px"><span style="margin-right:4em"><img src=image/icon_ip.gif title="123.110.*.*" border=0 align=middle></span></td></tr></table></td></tr><tr><td bgcolor=#ffffff width=16% height=40 align=center valign=middle border=1 style="border-width:0px 0px 0px 1px;border-style:dashed;border-color:#000000;"><br><img src="images/image7/3.gif" align=middle><br><br><table align=center style="width:10em;margin:1em" border=0 cellspacing=0 cellpadding=0><tr align=center><td width=100%/><span style="color:#000000"><strong>短褲</strong></span></td></tr></table></td><td width=84% style="border-width:0px 1px 1px 1px;border-color:#000000;border-style:dashed" bordercolor=#000000 bgcolor=#FFD1A4 background="image/bgorange.gif" onmouseover=javascript:{this.bgColor='#FFD306'} onmouseout=javascript:{this.bgColor='#FFD1A4'}><table width=100% border=0 style="table-layout:fixed;word-wrap:break-word"><tr><td valign=middle style="padding:1em"><div style="margin:0;padding:0;overflow:auto;width:100%"<span style="color:#000000">意外找到的網站&nbsp;感覺好像回到某個童年的午後可惜&#39;裡面的音樂大多不能下載了&nbsp;&nbsp;但還是希望這個網站能一直在</span></td></tr></table></td></tr></table><br><table width=913 border=0 bordercolor=#000000 cellpadding=0 align=center cellpadding=0 cellspacing=0 style="border-collapse:collapse;border-width:1px;border-color:#000000;border-style:dashed"><tr><td colspan=2 style="background:#FFA042" height=34 valign=middle><table border=0 cellpadding=0 width=100% cellspacing=0><tr><td valign=middle height=34 width=613 style="padding:0px">
+<span style="color:#000000">
+&nbsp;&nbsp;标题:<strong>无标题</strong></span><span style="color:#FFFFFF">&nbsp;&nbsp;<strong>Vic</strong></span>&nbsp;&nbsp;<span style="color:#000000">发表于2024年8月13日16时30分3秒<br></span></font></td><td height=34 align=right valign=middle style="padding:0px"><span style="margin-right:4em"><img src=image/icon_ip.gif title="61.134.*.*" border=0 align=middle></span></td></tr></table></td></tr><tr><td bgcolor=#ffffff width=16% height=40 align=center valign=middle border=1 style="border-width:0px 0px 0px 1px;border-style:dashed;border-color:#000000;"><br><img src="images/image7/13.gif" align=middle><br><br><table align=center style="width:10em;margin:1em" border=0 cellspacing=0 cellpadding=0><tr align=center><td width=100%/><span style="color:#000000"><strong>Vic</strong></span></td></tr></table></td><td width=84% style="border-width:0px 1px 1px 1px;border-color:#000000;border-style:dashed" bordercolor=#000000 bgcolor=#FFD1A4 background="image/bgorange.gif" onmouseover=javascript:{this.bgColor='#FFD306'} onmouseout=javascript:{this.bgColor='#FFD1A4'}><table width=100% border=0 style="table-layout:fixed;word-wrap:break-word"><tr><td valign=middle style="padding:1em"><div style="margin:0;padding:0;overflow:auto;width:100%"<span style="color:#000000">2024.8.13<br>奇妙的网站，像是打通了时空隧道一般，将2024的我的心绪引向了1999年的仲夏夜<br>从2020年开始，世界就变得愈发浮躁<br>疫情改变了很多，人们的不信任感逐渐加剧<br>割裂感愈发严重，2018年以前的黄金时代似已一去不复返<br><br>只有在这儿，我才能真切的感受到那个时代是真切存在过的。我相信真的存在过一个人们充满希望，不再迷惘，不顾白眼，为自己的热爱不断付出，无牵无挂，为自己的人生努力活下去的时代…<br><br>也许未来的我，或未来造访这个网站的过客会看到我的留言，在此留下自己的足迹，好好活下去，愿我们在未来的时候不再怀念现在</span></td></tr></table></td></tr></table><br><table width=913 border=0 bordercolor=#000000 cellpadding=0 align=center cellpadding=0 cellspacing=0 style="border-collapse:collapse;border-width:1px;border-color:#000000;border-style:dashed"><tr><td colspan=2 style="background:#FFA042" height=34 valign=middle><table border=0 cellpadding=0 width=100% cellspacing=0><tr><td valign=middle height=34 width=613 style="padding:0px">
+<span style="color:#000000">
+&nbsp;&nbsp;标题:<strong>无标题</strong></span><span style="color:#FFFFFF">&nbsp;&nbsp;<strong>小春日和</strong></span>&nbsp;&nbsp;<span style="color:#000000">发表于2024年8月13日11时54分45秒<br></span></font></td><td height=34 align=right valign=middle style="padding:0px"><span style="margin-right:4em"><img src=image/icon_ip.gif title="117.44.*.*" border=0 align=middle></span></td></tr></table></td></tr><tr><td bgcolor=#ffffff width=16% height=40 align=center valign=middle border=1 style="border-width:0px 0px 0px 1px;border-style:dashed;border-color:#000000;"><br><img src="images/image7/2.gif" align=middle><br><br><table align=center style="width:10em;margin:1em" border=0 cellspacing=0 cellpadding=0><tr align=center><td width=100%/><span style="color:#000000"><strong>小春日和</strong></span></td></tr></table></td><td width=84% style="border-width:0px 1px 1px 1px;border-color:#000000;border-style:dashed" bordercolor=#000000 bgcolor=#FFD1A4 background="image/bgorange.gif" onmouseover=javascript:{this.bgColor='#FFD306'} onmouseout=javascript:{this.bgColor='#FFD1A4'}><table width=100% border=0 style="table-layout:fixed;word-wrap:break-word"><tr><td valign=middle style="padding:1em"><div style="margin:0;padding:0;overflow:auto;width:100%"<span style="color:#000000">我有来咯，最近都心情不太好，好像大家都有周期，男的女的都有自己的周期。特别是在工作人群比较高发，什么都提不起劲，要做的事情还很多。前段时间海南游记也还没写，啊啊。</span></td></tr></table></td></tr></table><br><table width=913 border=0 bordercolor=#000000 cellpadding=0 align=center cellpadding=0 cellspacing=0 style="border-collapse:collapse;border-width:1px;border-color:#000000;border-style:dashed"><tr><td colspan=2 style="background:#FFA042" height=34 valign=middle><table border=0 cellpadding=0 width=100% cellspacing=0><tr><td valign=middle height=34 width=613 style="padding:0px">
+<span style="color:#000000">
+&nbsp;&nbsp;标题:<strong>我是火星人</strong></span><span style="color:#FFFFFF">&nbsp;&nbsp;<strong>我不是地球人</strong></span>&nbsp;&nbsp;<span style="color:#000000">发表于2024年8月13日3时19分46秒<br></span></font></td><td height=34 align=right valign=middle style="padding:0px"><span style="margin-right:4em"><img src=image/icon_ip.gif title="223.64.*.*" border=0 align=middle></span></td></tr></table></td></tr><tr><td bgcolor=#ffffff width=16% height=40 align=center valign=middle border=1 style="border-width:0px 0px 0px 1px;border-style:dashed;border-color:#000000;"><br><img src="images/image7/19.gif" align=middle><br><br><table align=center style="width:10em;margin:1em" border=0 cellspacing=0 cellpadding=0><tr align=center><td width=100%/><span style="color:#000000"><strong>我不是地球人</strong></span></td></tr></table></td><td width=84% style="border-width:0px 1px 1px 1px;border-color:#000000;border-style:dashed" bordercolor=#000000 bgcolor=#FFD1A4 background="image/bgorange.gif" onmouseover=javascript:{this.bgColor='#FFD306'} onmouseout=javascript:{this.bgColor='#FFD1A4'}><table width=100% border=0 style="table-layout:fixed;word-wrap:break-word"><tr><td valign=middle style="padding:1em"><div style="margin:0;padding:0;overflow:auto;width:100%"<span style="color:#000000">马上就要开学了，是高中生涯的最后一年了，假期也一直在上补习班，但总感觉学的还不够，英语3500也没有背完，语文必备的也没有背完，笔记也没有整理完...高三一年努力会有很大的变化吗<br>感觉在这里留言的年纪都比我大，我现在还是对未来比较担心，不知道能不能达成自己的目标.....<br>如果你看到我的留言可以和我分享你的故事吗（qq邮箱321978****@qq.com），大家在17岁时在干什么，迷茫和焦虑吗，后来有找到缓解的方法吗，现在又在干什么呢<br>许愿有人能邮箱告诉我（希望是激励人心的话，我很脆弱：（<br></span></td></tr></table></td></tr></table><br><table width=913 border=0 bordercolor=#000000 cellpadding=0 align=center cellpadding=0 cellspacing=0 style="border-collapse:collapse;border-width:1px;border-color:#000000;border-style:dashed"><tr><td colspan=2 style="background:#FFA042" height=34 valign=middle><table border=0 cellpadding=0 width=100% cellspacing=0><tr><td valign=middle height=34 width=613 style="padding:0px">
+<span style="color:#000000">
+&nbsp;&nbsp;标题:<strong>我又来留言了</strong></span><span style="color:#FFFFFF">&nbsp;&nbsp;<strong>小笼包的幸福生活</strong></span>&nbsp;&nbsp;<span style="color:#000000">发表于2024年8月12日23时14分23秒<br></span></font></td><td height=34 align=right valign=middle style="padding:0px"><span style="margin-right:4em"><img src=image/icon_ip.gif title="120.85.*.*" border=0 align=middle></span></td></tr></table></td></tr><tr><td bgcolor=#ffffff width=16% height=40 align=center valign=middle border=1 style="border-width:0px 0px 0px 1px;border-style:dashed;border-color:#000000;"><br><img src="images/image7/10.gif" align=middle><br><br><table align=center style="width:10em;margin:1em" border=0 cellspacing=0 cellpadding=0><tr align=center><td width=100%/><span style="color:#000000"><strong>小笼包的幸福生活</strong></span></td></tr></table></td><td width=84% style="border-width:0px 1px 1px 1px;border-color:#000000;border-style:dashed" bordercolor=#000000 bgcolor=#FFD1A4 background="image/bgorange.gif" onmouseover=javascript:{this.bgColor='#FFD306'} onmouseout=javascript:{this.bgColor='#FFD1A4'}><table width=100% border=0 style="table-layout:fixed;word-wrap:break-word"><tr><td valign=middle style="padding:1em"><div style="margin:0;padding:0;overflow:auto;width:100%"<span style="color:#000000">上次留言还在上学，这次我来种下一颗种子。已经工作两年了，加油。未来就在脚下。</span></td></tr></table></td></tr></table><br><table width=913 border=0 bordercolor=#000000 cellpadding=0 align=center cellpadding=0 cellspacing=0 style="border-collapse:collapse;border-width:1px;border-color:#000000;border-style:dashed"><tr><td colspan=2 style="background:#FFA042" height=34 valign=middle><table border=0 cellpadding=0 width=100% cellspacing=0><tr><td valign=middle height=34 width=613 style="padding:0px">
+<span style="color:#000000">
+&nbsp;&nbsp;标题:<strong>20&nbsp;多年了哦</strong></span><span style="color:#FFFFFF">&nbsp;&nbsp;<strong>访客</strong></span>&nbsp;&nbsp;<span style="color:#000000">发表于2024年8月12日17时55分7秒<br></span></font></td><td height=34 align=right valign=middle style="padding:0px"><span style="margin-right:4em"><img src=image/icon_ip.gif title="120.229.*.*" border=0 align=middle></span></td></tr></table></td></tr><tr><td bgcolor=#ffffff width=16% height=40 align=center valign=middle border=1 style="border-width:0px 0px 0px 1px;border-style:dashed;border-color:#000000;"><br><img src="images/image7/1.gif" align=middle><br><br><table align=center style="width:10em;margin:1em" border=0 cellspacing=0 cellpadding=0><tr align=center><td width=100%/><span style="color:#000000"><strong>访客</strong></span></td></tr></table></td><td width=84% style="border-width:0px 1px 1px 1px;border-color:#000000;border-style:dashed" bordercolor=#000000 bgcolor=#FFD1A4 background="image/bgorange.gif" onmouseover=javascript:{this.bgColor='#FFD306'} onmouseout=javascript:{this.bgColor='#FFD1A4'}><table width=100% border=0 style="table-layout:fixed;word-wrap:break-word"><tr><td valign=middle style="padding:1em"><div style="margin:0;padding:0;overflow:auto;width:100%"<span style="color:#000000">02年开始我喜欢这个网站，现在20多年啦，还在啊，有一种怀旧的感觉。</span></td></tr></table></td></tr></table><br><table width=913 border=0 bordercolor=#000000 cellpadding=0 align=center cellpadding=0 cellspacing=0 style="border-collapse:collapse;border-width:1px;border-color:#000000;border-style:dashed"><tr><td colspan=2 style="background:#FFA042" height=34 valign=middle><table border=0 cellpadding=0 width=100% cellspacing=0><tr><td valign=middle height=34 width=613 style="padding:0px">
+<span style="color:#000000">
+&nbsp;&nbsp;标题:<strong>无</strong></span><span style="color:#FFFFFF">&nbsp;&nbsp;<strong>访客</strong></span>&nbsp;&nbsp;<span style="color:#000000">发表于2024年8月12日12时34分19秒<br></span></font></td><td height=34 align=right valign=middle style="padding:0px"><span style="margin-right:4em"><img src=image/icon_ip.gif title="183.199.*.*" border=0 align=middle></span></td></tr></table></td></tr><tr><td bgcolor=#ffffff width=16% height=40 align=center valign=middle border=1 style="border-width:0px 0px 0px 1px;border-style:dashed;border-color:#000000;"><br><img src="images/image7/22.gif" align=middle><br><br><table align=center style="width:10em;margin:1em" border=0 cellspacing=0 cellpadding=0><tr align=center><td width=100%/><span style="color:#000000"><strong>访客</strong></span></td></tr></table></td><td width=84% style="border-width:0px 1px 1px 1px;border-color:#000000;border-style:dashed" bordercolor=#000000 bgcolor=#FFD1A4 background="image/bgorange.gif" onmouseover=javascript:{this.bgColor='#FFD306'} onmouseout=javascript:{this.bgColor='#FFD1A4'}><table width=100% border=0 style="table-layout:fixed;word-wrap:break-word"><tr><td valign=middle style="padding:1em"><div style="margin:0;padding:0;overflow:auto;width:100%"<span style="color:#000000">第一次打开这个网站&nbsp;希望多年以后还能看到我的这条留言<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr></table></td></tr></table><br>
+<form name="tiaozhuanform">
+总共<strong>615</strong>页&nbsp;当前为第<strong>168</strong>页&nbsp;共<strong>10455</strong>条留言 每页<strong>17</strong>条留言&nbsp;<a href="http://www.yini.org/liuyan/default.asp?page=1">第一页</a> <a href="http://www.yini.org/liuyan/default.asp?page=167">上一页</a>&nbsp;<a href="http://www.yini.org/liuyan/default.asp?page=169">下一页</a> <a href="http://www.yini.org/liuyan/default.asp?page=615">最后一页</a>&nbsp;第&nbsp;<select onchange=javascript:{tiaozhuan(this.options[this.options.selectedIndex].text)}><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option><option>13</option><option>14</option><option>15</option><option>16</option><option>17</option><option>18</option><option>19</option><option>20</option><option>21</option><option>22</option><option>23</option><option>24</option><option>25</option><option>26</option><option>27</option><option>28</option><option>29</option><option>30</option><option>31</option><option>32</option><option>33</option><option>34</option><option>35</option><option>36</option><option>37</option><option>38</option><option>39</option><option>40</option><option>41</option><option>42</option><option>43</option><option>44</option><option>45</option><option>46</option><option>47</option><option>48</option><option>49</option><option>50</option><option>51</option><option>52</option><option>53</option><option>54</option><option>55</option><option>56</option><option>57</option><option>58</option><option>59</option><option>60</option><option>61</option><option>62</option><option>63</option><option>64</option><option>65</option><option>66</option><option>67</option><option>68</option><option>69</option><option>70</option><option>71</option><option>72</option><option>73</option><option>74</option><option>75</option><option>76</option><option>77</option><option>78</option><option>79</option><option>80</option><option>81</option><option>82</option><option>83</option><option>84</option><option>85</option><option>86</option><option>87</option><option>88</option><option>89</option><option>90</option><option>91</option><option>92</option><option>93</option><option>94</option><option>95</option><option>96</option><option>97</option><option>98</option><option>99</option><option>100</option><option>101</option><option>102</option><option>103</option><option>104</option><option>105</option><option>106</option><option>107</option><option>108</option><option>109</option><option>110</option><option>111</option><option>112</option><option>113</option><option>114</option><option>115</option><option>116</option><option>117</option><option>118</option><option>119</option><option>120</option><option>121</option><option>122</option><option>123</option><option>124</option><option>125</option><option>126</option><option>127</option><option>128</option><option>129</option><option>130</option><option>131</option><option>132</option><option>133</option><option>134</option><option>135</option><option>136</option><option>137</option><option>138</option><option>139</option><option>140</option><option>141</option><option>142</option><option>143</option><option>144</option><option>145</option><option>146</option><option>147</option><option>148</option><option>149</option><option>150</option><option>151</option><option>152</option><option>153</option><option>154</option><option>155</option><option>156</option><option>157</option><option>158</option><option>159</option><option>160</option><option>161</option><option>162</option><option>163</option><option>164</option><option>165</option><option>166</option><option>167</option><option selected>168</option><option>169</option><option>170</option><option>171</option><option>172</option><option>173</option><option>174</option><option>175</option><option>176</option><option>177</option><option>178</option><option>179</option><option>180</option><option>181</option><option>182</option><option>183</option><option>184</option><option>185</option><option>186</option><option>187</option><option>188</option><option>189</option><option>190</option><option>191</option><option>192</option><option>193</option><option>194</option><option>195</option><option>196</option><option>197</option><option>198</option><option>199</option><option>200</option><option>201</option><option>202</option><option>203</option><option>204</option><option>205</option><option>206</option><option>207</option><option>208</option><option>209</option><option>210</option><option>211</option><option>212</option><option>213</option><option>214</option><option>215</option><option>216</option><option>217</option><option>218</option><option>219</option><option>220</option><option>221</option><option>222</option><option>223</option><option>224</option><option>225</option><option>226</option><option>227</option><option>228</option><option>229</option><option>230</option><option>231</option><option>232</option><option>233</option><option>234</option><option>235</option><option>236</option><option>237</option><option>238</option><option>239</option><option>240</option><option>241</option><option>242</option><option>243</option><option>244</option><option>245</option><option>246</option><option>247</option><option>248</option><option>249</option><option>250</option><option>251</option><option>252</option><option>253</option><option>254</option><option>255</option><option>256</option><option>257</option><option>258</option><option>259</option><option>260</option><option>261</option><option>262</option><option>263</option><option>264</option><option>265</option><option>266</option><option>267</option><option>268</option><option>269</option><option>270</option><option>271</option><option>272</option><option>273</option><option>274</option><option>275</option><option>276</option><option>277</option><option>278</option><option>279</option><option>280</option><option>281</option><option>282</option><option>283</option><option>284</option><option>285</option><option>286</option><option>287</option><option>288</option><option>289</option><option>290</option><option>291</option><option>292</option><option>293</option><option>294</option><option>295</option><option>296</option><option>297</option><option>298</option><option>299</option><option>300</option><option>301</option><option>302</option><option>303</option><option>304</option><option>305</option><option>306</option><option>307</option><option>308</option><option>309</option><option>310</option><option>311</option><option>312</option><option>313</option><option>314</option><option>315</option><option>316</option><option>317</option><option>318</option><option>319</option><option>320</option><option>321</option><option>322</option><option>323</option><option>324</option><option>325</option><option>326</option><option>327</option><option>328</option><option>329</option><option>330</option><option>331</option><option>332</option><option>333</option><option>334</option><option>335</option><option>336</option><option>337</option><option>338</option><option>339</option><option>340</option><option>341</option><option>342</option><option>343</option><option>344</option><option>345</option><option>346</option><option>347</option><option>348</option><option>349</option><option>350</option><option>351</option><option>352</option><option>353</option><option>354</option><option>355</option><option>356</option><option>357</option><option>358</option><option>359</option><option>360</option><option>361</option><option>362</option><option>363</option><option>364</option><option>365</option><option>366</option><option>367</option><option>368</option><option>369</option><option>370</option><option>371</option><option>372</option><option>373</option><option>374</option><option>375</option><option>376</option><option>377</option><option>378</option><option>379</option><option>380</option><option>381</option><option>382</option><option>383</option><option>384</option><option>385</option><option>386</option><option>387</option><option>388</option><option>389</option><option>390</option><option>391</option><option>392</option><option>393</option><option>394</option><option>395</option><option>396</option><option>397</option><option>398</option><option>399</option><option>400</option><option>401</option><option>402</option><option>403</option><option>404</option><option>405</option><option>406</option><option>407</option><option>408</option><option>409</option><option>410</option><option>411</option><option>412</option><option>413</option><option>414</option><option>415</option><option>416</option><option>417</option><option>418</option><option>419</option><option>420</option><option>421</option><option>422</option><option>423</option><option>424</option><option>425</option><option>426</option><option>427</option><option>428</option><option>429</option><option>430</option><option>431</option><option>432</option><option>433</option><option>434</option><option>435</option><option>436</option><option>437</option><option>438</option><option>439</option><option>440</option><option>441</option><option>442</option><option>443</option><option>444</option><option>445</option><option>446</option><option>447</option><option>448</option><option>449</option><option>450</option><option>451</option><option>452</option><option>453</option><option>454</option><option>455</option><option>456</option><option>457</option><option>458</option><option>459</option><option>460</option><option>461</option><option>462</option><option>463</option><option>464</option><option>465</option><option>466</option><option>467</option><option>468</option><option>469</option><option>470</option><option>471</option><option>472</option><option>473</option><option>474</option><option>475</option><option>476</option><option>477</option><option>478</option><option>479</option><option>480</option><option>481</option><option>482</option><option>483</option><option>484</option><option>485</option><option>486</option><option>487</option><option>488</option><option>489</option><option>490</option><option>491</option><option>492</option><option>493</option><option>494</option><option>495</option><option>496</option><option>497</option><option>498</option><option>499</option><option>500</option><option>501</option><option>502</option><option>503</option><option>504</option><option>505</option><option>506</option><option>507</option><option>508</option><option>509</option><option>510</option><option>511</option><option>512</option><option>513</option><option>514</option><option>515</option><option>516</option><option>517</option><option>518</option><option>519</option><option>520</option><option>521</option><option>522</option><option>523</option><option>524</option><option>525</option><option>526</option><option>527</option><option>528</option><option>529</option><option>530</option><option>531</option><option>532</option><option>533</option><option>534</option><option>535</option><option>536</option><option>537</option><option>538</option><option>539</option><option>540</option><option>541</option><option>542</option><option>543</option><option>544</option><option>545</option><option>546</option><option>547</option><option>548</option><option>549</option><option>550</option><option>551</option><option>552</option><option>553</option><option>554</option><option>555</option><option>556</option><option>557</option><option>558</option><option>559</option><option>560</option><option>561</option><option>562</option><option>563</option><option>564</option><option>565</option><option>566</option><option>567</option><option>568</option><option>569</option><option>570</option><option>571</option><option>572</option><option>573</option><option>574</option><option>575</option><option>576</option><option>577</option><option>578</option><option>579</option><option>580</option><option>581</option><option>582</option><option>583</option><option>584</option><option>585</option><option>586</option><option>587</option><option>588</option><option>589</option><option>590</option><option>591</option><option>592</option><option>593</option><option>594</option><option>595</option><option>596</option><option>597</option><option>598</option><option>599</option><option>600</option><option>601</option><option>602</option><option>603</option><option>604</option><option>605</option><option>606</option><option>607</option><option>608</option><option>609</option><option>610</option><option>611</option><option>612</option><option>613</option><option>614</option><option>615</option></select>&nbsp;页&nbsp;第&nbsp;<input name="thepage" type="text" id="thepage" value="168" size="3">&nbsp;页
+<input type=button value=跳转 onclick=javascript:{tiaozhuan2();}>
+<script language=JavaScript>function gourl(){window.self.location.href="default.asp?page="+document.all.thepage.value+"";}</script>
+</form>
+</td></tr></table>
+</td></tr></table>
+<div align=center>　</div>
+<br>
+
+<form id="form1" name="form1" method="post" action="addok.asp" onsubmit=javascript:{return(yanzheng());}>
+ <table width=913 align=center><tr align=left><td> <table width="400" border="0">
+    
+    <tr valign="top">
+      <td width="144"><input type="text" name="email" /></td>
+      <td><input type="text" name="qq" /><br />
+          <br /></td>
+    </tr>
+    
+    <tr valign="top">
+      <td width="144"><br />
+          &nbsp;<br /></td>
+      <td>　</td>
+    </tr>
+    <tr valign="top">
+      <td width="144"><a name="nicheng" class="nicheng" id="nicheng"><font color="#000000">昵称</font></a>(<font color="#ff0000">必填</font>)：<br />
+          <br /></td>
+      <td><input name="nicheng" type="text" value="访客" /></td>
+    </tr>
+    <tr valign="top">
+      <td width="144">标题(选填)：<br />
+          <br /></td>
+      <td><input name="thetitle" type="text" id="thetitle" /></td>
+    </tr>
+  </table>
+  </td></tr></table>
+  <table width="913" border="0" align="center"><tr><td>请选择头像:</td></tr></table>
+  <table width="913" align="center">
+  <tr valign="top">
+	<td>
+	
+		
+		<table border=0 cellspacing=0 cellpadding=10><tr><td valign=middle><nobr><input type=radio name=image checked value=images/image7/1.gif id=img1><label for=img1><img src=images/image7/1.gif align=middle onclick=javascript:{document.getElementById("img1").checked="true"} style="cursor:hand"></label></nobr></td><td valign=middle><nobr><input type=radio name=image value=images/image7/10.gif id=img2><label for=img2><img src=images/image7/10.gif align=middle onclick=javascript:{document.getElementById("img2").checked="true"} style="cursor:hand"></label></nobr></td><td valign=middle><nobr><input type=radio name=image value=images/image7/11.gif id=img3><label for=img3><img src=images/image7/11.gif align=middle onclick=javascript:{document.getElementById("img3").checked="true"} style="cursor:hand"></label></nobr></td><td valign=middle><nobr><input type=radio name=image value=images/image7/12.gif id=img4><label for=img4><img src=images/image7/12.gif align=middle onclick=javascript:{document.getElementById("img4").checked="true"} style="cursor:hand"></label></nobr></td><td valign=middle><nobr><input type=radio name=image value=images/image7/13.gif id=img5><label for=img5><img src=images/image7/13.gif align=middle onclick=javascript:{document.getElementById("img5").checked="true"} style="cursor:hand"></label></nobr></td><td valign=middle><nobr><input type=radio name=image value=images/image7/14.gif id=img6><label for=img6><img src=images/image7/14.gif align=middle onclick=javascript:{document.getElementById("img6").checked="true"} style="cursor:hand"></label></nobr></td><td valign=middle><nobr><input type=radio name=image value=images/image7/15.gif id=img7><label for=img7><img src=images/image7/15.gif align=middle onclick=javascript:{document.getElementById("img7").checked="true"} style="cursor:hand"></label></nobr></td><td valign=middle><nobr><input type=radio name=image value=images/image7/16.gif id=img8><label for=img8><img src=images/image7/16.gif align=middle onclick=javascript:{document.getElementById("img8").checked="true"} style="cursor:hand"></label></nobr></td></tr><tr><td valign=middle><nobr><input type=radio name=image value=images/image7/17.gif id=img9><label for=img9><img src=images/image7/17.gif align=middle onclick=javascript:{document.getElementById("img9").checked="true"} style="cursor:hand"></label></nobr></td><td valign=middle><nobr><input type=radio name=image value=images/image7/18.gif id=img10><label for=img10><img src=images/image7/18.gif align=middle onclick=javascript:{document.getElementById("img10").checked="true"} style="cursor:hand"></label></nobr></td><td valign=middle><nobr><input type=radio name=image value=images/image7/19.gif id=img11><label for=img11><img src=images/image7/19.gif align=middle onclick=javascript:{document.getElementById("img11").checked="true"} style="cursor:hand"></label></nobr></td><td valign=middle><nobr><input type=radio name=image value=images/image7/2.gif id=img12><label for=img12><img src=images/image7/2.gif align=middle onclick=javascript:{document.getElementById("img12").checked="true"} style="cursor:hand"></label></nobr></td><td valign=middle><nobr><input type=radio name=image value=images/image7/20.gif id=img13><label for=img13><img src=images/image7/20.gif align=middle onclick=javascript:{document.getElementById("img13").checked="true"} style="cursor:hand"></label></nobr></td><td valign=middle><nobr><input type=radio name=image value=images/image7/21.gif id=img14><label for=img14><img src=images/image7/21.gif align=middle onclick=javascript:{document.getElementById("img14").checked="true"} style="cursor:hand"></label></nobr></td><td valign=middle><nobr><input type=radio name=image value=images/image7/22.gif id=img15><label for=img15><img src=images/image7/22.gif align=middle onclick=javascript:{document.getElementById("img15").checked="true"} style="cursor:hand"></label></nobr></td><td valign=middle><nobr><input type=radio name=image value=images/image7/23.gif id=img16><label for=img16><img src=images/image7/23.gif align=middle onclick=javascript:{document.getElementById("img16").checked="true"} style="cursor:hand"></label></nobr></td></tr><tr><td valign=middle><nobr><input type=radio name=image value=images/image7/24.gif id=img17><label for=img17><img src=images/image7/24.gif align=middle onclick=javascript:{document.getElementById("img17").checked="true"} style="cursor:hand"></label></nobr></td><td valign=middle><nobr><input type=radio name=image value=images/image7/3.gif id=img18><label for=img18><img src=images/image7/3.gif align=middle onclick=javascript:{document.getElementById("img18").checked="true"} style="cursor:hand"></label></nobr></td><td valign=middle><nobr><input type=radio name=image value=images/image7/4.gif id=img19><label for=img19><img src=images/image7/4.gif align=middle onclick=javascript:{document.getElementById("img19").checked="true"} style="cursor:hand"></label></nobr></td><td valign=middle><nobr><input type=radio name=image value=images/image7/5.gif id=img20><label for=img20><img src=images/image7/5.gif align=middle onclick=javascript:{document.getElementById("img20").checked="true"} style="cursor:hand"></label></nobr></td><td valign=middle><nobr><input type=radio name=image value=images/image7/6.gif id=img21><label for=img21><img src=images/image7/6.gif align=middle onclick=javascript:{document.getElementById("img21").checked="true"} style="cursor:hand"></label></nobr></td><td valign=middle><nobr><input type=radio name=image value=images/image7/7.gif id=img22><label for=img22><img src=images/image7/7.gif align=middle onclick=javascript:{document.getElementById("img22").checked="true"} style="cursor:hand"></label></nobr></td><td valign=middle><nobr><input type=radio name=image value=images/image7/8.gif id=img23><label for=img23><img src=images/image7/8.gif align=middle onclick=javascript:{document.getElementById("img23").checked="true"} style="cursor:hand"></label></nobr></td><td valign=middle><nobr><input type=radio name=image value=images/image7/9.gif id=img24><label for=img24><img src=images/image7/9.gif align=middle onclick=javascript:{document.getElementById("img24").checked="true"} style="cursor:hand"></label></nobr></td></tr></table>
+		  
+		  
+		  
+		  
+</table><br>
+
+
+
+<table width=913 align=center border=0><tr><td>		  
+		  留言内容(<font color=#ff0000>必填</font>)：<br><br>
+UBB代码支持：<font color=#ff0000>已经关闭</font><br>
+
+<br>
+<textarea name="content" id="content" rows=10 cols=69></textarea>
+<br><br>目前已经输入:<span id="thenum" style="color:#ff0000">0</span>个字符，你还可以输入<span id="thenum2"><font color="#ff0000">2000</font></span>个字符<br>
+	   <br />是否悄悄话（只有管理员才能看得见）：<input type=checkbox name=qiaoqiao value=1><br /><br>
+验证码(<font color=#ff0000>必填</font>):
+<input type="text" name="num" size=4 maxlength=4><a href=javascript:{changecode();}><img src="code.asp" border=0 name="num" align=middle height=26 width=81></a>&nbsp;<a class="changecode" href=javascript:{changecode();}>点击刷新验证码</a>
+<br><br>
+<input type=button value="预览" onclick=javascript:{preview();}>&nbsp;
+<input type=button value="发表" onclick=javascript:{submit2();}>&nbsp;<font color=#000000>为防止提交错误，发表前请先复制留言内容</font>。
+</td></tr></table>
+</form>
+
+
+
+
+<script language="javascript">
+changenum();
+</script>
+
+<br>
+<div align=center id="thediv">
+秘密花园留言本
+</div>
+<br><br>
+</script>
+</body>
+</html>

@@ -16,6 +16,7 @@ RUN apt-get update \
 WORKDIR /app
 ENV NODE_ENV=production PORT=3020 DB_PATH=/var/lib/jiange/app.sqlite
 COPY --chown=node:node server ./server
+COPY --chown=node:node projects/yini-website ./projects/yini-website
 COPY --chown=node:node data/*.json ./data/
 COPY --from=build --chown=node:node /app/dist ./dist
 USER node

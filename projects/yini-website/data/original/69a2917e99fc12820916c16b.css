@@ -1,0 +1,39 @@
+A:link {
+	COLOR: #AC88A8
+; text-decoration: none
+}
+A:visited {
+	COLOR: #AC88A8
+; text-decoration: none
+}
+A:active {
+	COLOR: #AC88A8; text-decoration: none
+}
+A:hover {
+	COLOR: #AC88A8; FONT-WEIGHT: normal
+; text-decoration: underline
+}
+.aa {
+	FONT-SIZE: 9pt
+}
+.bb {
+	FONT-SIZE: 12pt; FONT-WEIGHT: bold
+}
+.cc {
+	FONT-SIZE: 10.5pt
+}
+TABLE {
+	BORDER-BOTTOM-WIDTH: 0px; BORDER-LEFT-WIDTH: 1px; BORDER-RIGHT-WIDTH: 0px; BORDER-TOP-WIDTH: 1px
+}
+BODY {
+	FONT-SIZE: 9pt; LINE-HEIGHT: 150%
+}
+TABLE {
+	FONT-SIZE: 9pt; LINE-HEIGHT: 150%
+}
+TR {
+	FONT-SIZE: 9pt; LINE-HEIGHT: 140%
+}
+TD {
+	FONT-SIZE: 9pt; LINE-HEIGHT: 140%
+}

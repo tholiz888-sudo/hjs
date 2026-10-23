@@ -16,8 +16,9 @@ export function loadArchive(){
  }
  return{pages,manifest,stats:{known:manifest.records.filter(r=>r.status===200).length,available,music,mp3,importComplete:available===manifest.records.filter(r=>r.status===200).length,unavailable:manifest.records.filter(r=>r.status!==200).length,complete:false}};
 }
-export function localize(buffer){
- let text=buffer.toString('latin1').replace(/https?:\/\/(?:www\.)?(?:yini\.org|lili\.cc)\//gi,'/');
+export function localize(buffer,prefix=''){
+ let text=buffer.toString('latin1').replace(/(?:https?:)?\/\/(?:www\.)?(?:yini\.org|lili\.cc)\//gi,prefix+'/');
+ if(prefix){text=text.replace(/(\b(?:href|src|action|background|poster)\s*=\s*["']?)(\/(?!\/)[^\s"'<>]*)/gi,(_,before,value)=>before+(value.startsWith(prefix+'/')?value:prefix+value));text=text.replace(/url\((['"]?)(\/(?!\/)[^)'"\s]+)\1\)/gi,(_,q,value)=>`url(${q}${value.startsWith(prefix+'/')?value:prefix+value}${q})`)}
  // This original anti-frame block contains syntax errors; leave article scripts intact.
  text=text.replace(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi,(tag,body)=>body.includes("getElementByTagName('iframe')")&&body.includes('var hostname=location.hostname,')?'':tag);
  return Buffer.from(text,'latin1');
