@@ -1,0 +1,3 @@
+data/original/*
+node_modules/
+*.log

@@ -1,0 +1,14 @@
+{
+  "name": "secret-garden-recreation",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "check": "node verify.mjs",
+    "test": "node --test tests.mjs"
+  }
+}
