@@ -1,6 +1,11 @@
 const store=require('./garden-store.cjs');
 async function handleGardenApi({req,res,p,u,json,read,actor,base}){
+ const community=require('./garden-community-store.cjs');
  const route=p.slice('/admin/api/garden'.length),method=req.method;
+ if(route==='/messages'&&method==='GET')return json(200,community.messages(Object.fromEntries(u.searchParams)));
+ if(route==='/messages'&&method==='POST')return json(200,community.moderate(await read(req),actor));
+ if(route==='/users'&&method==='GET')return json(200,community.users(Object.fromEntries(u.searchParams)));
+ if(route==='/users'&&method==='POST')return json(200,community.mute(await read(req),actor));
  if(route==='/pages'&&method==='GET')return json(200,store.list(Object.fromEntries(u.searchParams)));
  if(route==='/page'&&method==='GET')return json(200,{page:store.get(u.searchParams.get('id'))});
  if(route==='/page'&&method==='POST')return json(200,{page:store.save(await read(req),actor)});

@@ -34,4 +34,4 @@ res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no
 res.end(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>网站管理中心</title><link rel="stylesheet" href="${base}/assets/admin.css"></head><body data-base="${e(base)}">${body}<script src="${base}/assets/garden-admin.js" defer></script><script src="${base}/assets/admin.js" defer></script></body></html>`)
 
 }catch(error){json(400,{error:error.message})}}
-module.exports={handleAdmin};
+module.exports={handleAdmin,researchCall,read};

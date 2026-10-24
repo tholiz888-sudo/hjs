@@ -1,0 +1,31 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),{spawn}=require('node:child_process');
+test('garden registration, scoped member records, moderated guestbook, privacy, mute and persistence',async()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'garden-community-'));let child,port,admin,user;
+ async function start(){child=spawn(process.execPath,['-e',`const http=require('node:http');http.createServer((q,r)=>require('./server').handleSiteRequest(q,r,{mountPath:'/crypto'})).listen(0,'127.0.0.1',function(){console.log('PORT='+this.address().port)})`],{cwd:path.resolve(__dirname,'..'),env:{...process.env,ADMIN_EMAILS:'owner@example.com',ADMIN_PASSWORD:'community-test-password',MARKET_AUTO_SYNC:'0',PORTAL_DB_PATH:path.join(dir,'content.sqlite'),RESEARCH_DB_PATH:path.join(dir,'research.sqlite')}});await new Promise((resolve,reject)=>{let out='';const timer=setTimeout(()=>reject(Error(out)),10000);child.stdout.on('data',b=>{out+=b;const m=out.match(/PORT=(\d+)/);if(m){port=m[1];clearTimeout(timer);resolve()}});child.stderr.on('data',b=>out+=b)})}
+ async function stop(){if(child){const p=child;child=null;p.kill();await new Promise(r=>p.on('exit',r))}}
+ async function req(url,method='GET',data,cookie,extra={}){const r=await fetch(`http://127.0.0.1:${port}/crypto`+url,{method,headers:{'Content-Type':'application/json',...(cookie?{Cookie:cookie}:{}),...extra},body:data===undefined?undefined:JSON.stringify(data)});const text=await r.text();let value;try{value=JSON.parse(text)}catch{value=text}return{status:r.status,value,headers:r.headers}}
+ async function ok(url,method,data,cookie){const r=await req(url,method,data,cookie);assert.equal(r.status,200,JSON.stringify(r.value));return r.value}
+ const api='/garden/community/api',manage='/admin/api/garden';
+ try{
+  await start();const html=await ok('/garden/community');assert.match(html,/花园留言板/);assert.match(html,/community\/app.js/);assert.match(await ok('/garden'),/garden\/community/);
+  assert.equal((await req(manage+'/messages')).status,401);assert.equal((await req(manage+'/users')).status,401);assert.equal((await req(api+'/messages','POST',{body:'匿名'})).status,401);
+  assert.equal((await req(api+'/register','POST',{email:'a@example.com',password:'password123'},null,{Origin:'https://evil.example'})).status,403);
+  const registered=await req(api+'/register','POST',{email:'flower@example.com',password:'flower-pass-123'});assert.equal(registered.status,200,JSON.stringify(registered.value));assert.match(registered.headers.get('set-cookie'),/Path=\/crypto;/);user=registered.headers.getSetCookie()[0].split(';')[0];assert.doesNotMatch(JSON.stringify(registered.value),/password|bootstrap|session/);
+  const who=await ok(api+'/session','GET',undefined,user);assert.equal(who.user.email,'flower@example.com');
+  const submitted=await ok(api+'/messages','POST',{body:'一段心情 <script>alert(1)</script>'},user);assert.equal(submitted.status,'pending');assert.equal((await ok(api+'/messages')).total,0);
+  assert.equal((await req(api+'/messages','POST',{body:'再次发送'},user)).status,400);assert.equal((await req(manage+'/messages','GET',undefined,user)).status,401);
+  const owner=await req('/admin/api/login','POST',{email:'owner@example.com',password:'community-test-password'});assert.equal(owner.status,200);admin=owner.headers.getSetCookie()[0].split(';')[0];
+  const members=await ok(manage+'/users','GET',undefined,admin);assert.equal(members.total,1);assert.equal(members.items[0].source,'garden-register');assert.equal(members.items[0].message_count,1);assert.doesNotMatch(JSON.stringify(members),/password|bootstrap/);
+  const pending=await ok(manage+'/messages?status=pending','GET',undefined,admin);assert.equal(pending.total,1);assert.equal(pending.items[0].email,'flower@example.com');
+  await ok(manage+'/messages','POST',{id:submitted.id,status:'published',reply:'欢迎来花园。'},admin);let visible=await ok(api+'/messages');assert.equal(visible.total,1);assert.equal(visible.items[0].reply,'欢迎来花园。');assert.equal(visible.items[0].email,undefined);assert.equal(visible.items[0].user_id,undefined);
+  await ok(manage+'/messages','POST',{id:submitted.id,status:'hidden',reply:'欢迎'},admin);assert.equal((await ok(api+'/messages')).total,0);
+  await ok(manage+'/messages','POST',{id:submitted.id,status:'trash'},admin);assert.equal((await ok(manage+'/messages?status=trash','GET',undefined,admin)).total,1);
+  await ok(manage+'/messages','POST',{id:submitted.id,status:'published',reply:'恢复'},admin);
+  await ok(manage+'/users','POST',{id:who.user.id,muted:true},admin);assert.match((await req(api+'/messages','POST',{body:'被禁言'},user)).value.error,/禁止/);assert.equal((await ok(api+'/session','GET',undefined,user)).user.muted,true);
+  await stop();await start();assert.equal((await ok(api+'/messages')).total,1);assert.equal((await ok(manage+'/users','GET',undefined,admin)).items[0].muted,1);
+  await ok(manage+'/users','POST',{id:who.user.id,muted:false},admin);assert.equal((await ok(api+'/session','GET',undefined,user)).user.muted,false);
+  await ok(api+'/logout','POST',{},user);assert.equal((await ok(api+'/session','GET',undefined,user)).user,null);
+  assert.equal((await req(api+'/login','POST',{email:'flower@example.com',password:'bad-pass-123'})).status,401);
+  const login=await req(api+'/login','POST',{email:'flower@example.com',password:'flower-pass-123'});assert.equal(login.status,200);assert.equal((await ok(manage+'/users','GET',undefined,admin)).total,1);
+ }finally{await stop();fs.rmSync(dir,{recursive:true,force:true})}
+});
