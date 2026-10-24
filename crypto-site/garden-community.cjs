@@ -1,7 +1,7 @@
 const fs=require('node:fs'),path=require('node:path'),store=require('./garden-community-store.cjs');
 const e=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-async function handleCommunity(req,res,{base=''}){
- const u=new URL(req.url,'http://localhost'),p=u.pathname.slice((base+'/garden/community').length),method=req.method;
+async function handleCommunity(req,res,{base='',pageRoute}){
+ const u=new URL(req.url,'http://localhost'),p=pageRoute??u.pathname.slice((base+'/garden/community').length),method=req.method;
  const visitorCookie=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('garden_visitor='))?.slice(15);const visitor=/^[a-f0-9]{64}$/.test(visitorCookie||'')?visitorCookie:require('node:crypto').randomBytes(32).toString('hex');if(visitor!==visitorCookie)res.setHeader('Set-Cookie',`garden_visitor=${visitor}; HttpOnly; SameSite=Strict; Path=${base}/garden; Max-Age=2592000${req.headers['x-forwarded-proto']==='https'||req.socket.encrypted?'; Secure':''}`);
  const json=(status,value)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(value))};
  try{

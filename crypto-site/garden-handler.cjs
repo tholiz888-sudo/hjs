@@ -17,6 +17,7 @@ async function handleGardenRequest(req,res,{base=''}={}){
  }
  if(/^\/garden\/view\/liuyan\/(?:default\.asp|index\.(?:asp|html?))?$/i.test(route)){
   if(!['GET','HEAD'].includes(req.method)){res.writeHead(405,{Allow:'GET, HEAD'}).end();return}
+  if(req.headers['sec-fetch-dest']==='document')return require('./garden-community.cjs').handleCommunity(req,res,{base,pageRoute:''});
   try{const html=require('./garden-guestbook.cjs').renderGuestbook(base,Object.fromEntries(url.searchParams));res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'; img-src 'self'; script-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"});res.end(req.method==='HEAD'?undefined:html)}catch(error){res.writeHead(400,{'Content-Type':'text/plain; charset=utf-8'}).end(error.message)}return;
  }
  if(route==='/garden/view'||route.startsWith('/garden/view/')){try{const handler=await getHandler(base);return await handler(req,res)}catch(error){console.error('Garden request failed:',error.message);if(!res.headersSent)res.writeHead(503,{'Content-Type':'text/plain; charset=utf-8'});res.end('花园暂时无法读取，请稍后重试。');return}}

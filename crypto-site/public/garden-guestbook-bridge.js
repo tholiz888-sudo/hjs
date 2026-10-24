@@ -2,4 +2,5 @@
 function compose(){if(!target)return;if(window.parent!==window)window.parent.postMessage({gardenAction:'compose'},'*');else window.location.href=target}
 document.addEventListener('click',event=>{if(event.target.closest('[data-garden-compose]')){event.preventDefault();compose()}});
 if(['#nicheng','#compose'].includes(location.hash))compose();addEventListener('hashchange',()=>{if(['#nicheng','#compose'].includes(location.hash))compose()});
-const frame=document.querySelector('iframe[title="秘密花园"]');if(frame&&target)addEventListener('message',event=>{if(event.source===frame.contentWindow&&event.data?.gardenAction==='compose')location.href=target});})();
+if(document.body.dataset.gardenGuestbook==='true'&&window.parent!==window&&!['#nicheng','#compose'].includes(location.hash))window.parent.postMessage({gardenAction:'guestbook',page:Number(new URLSearchParams(location.search).get('page'))||1},'*');
+const frame=document.querySelector('iframe[title="秘密花园"]');if(frame&&target)addEventListener('message',event=>{if(event.source!==frame.contentWindow)return;if(event.data?.gardenAction==='compose')location.href=target;else if(event.data?.gardenAction==='guestbook'){const url=new URL(target,location.href),page=Number(event.data.page);url.hash='';url.searchParams.set('page',Number.isInteger(page)&&page>0&&page<=100000?page:1);location.href=url.href}});})();
