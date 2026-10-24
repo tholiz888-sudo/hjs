@@ -1,0 +1,172 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML><HEAD>
+<meta http-equiv="Content-Type" content="text/html; charset=gb2312">
+<meta name="GENERATOR" content="Microsoft FrontPage 6.0">
+<meta name="ProgId" content="FrontPage.Editor.Document">
+<TITLE>天堂之梦</TITLE>
+<link rel="stylesheet" type="text/css" href="lili.css">
+
+</HEAD>
+<BODY bgColor=#383438 background=valleyoflongingtile.jpg link="#9CBEB5" vlink="#9CBEB5" alink="#9CBEB5">
+<SCRIPT language=JavaScript>
+<!-- bubbles Script by kurt.grigg@virgin.net
+
+Image0=new Image();
+Image0.src="firefly2.gif";
+Amount=15; 
+
+Ypos=new Array();
+Xpos=new Array();
+Speed=new Array();
+rate=new Array();
+grow=new Array();
+Step=new Array();
+Cstep=new Array();
+nsSize=new Array();
+ns=(document.layers)?1:0;
+WinHeight=(document.layers)?window.innerHeight:window.document.body.clientHeight;
+WinWidth=(document.layers)?window.innerWidth:window.document.body.clientWidth;
+for (i=0; i < Amount; i++){                                                                
+ Ypos[i] = Math.round(Math.random()*WinHeight);
+ Xpos[i] = Math.round(Math.random()*WinWidth);
+ Speed[i]= Math.random()*4+4;
+ Cstep[i]=0;
+ Step[i]=Math.random()*0.1+0.05;
+ grow[i]=10;
+ nsSize[i]=Math.random()*15+5;
+}
+if (ns){
+for (i = 0; i < Amount; i++){
+document.write("<LAYER NAME='sn"+i+"' LEFT=0 TOP=0><img src="+Image0.src+" name='N' width="+nsSize[i]+" height="+nsSize[i]+"></LAYER>");
+}
+}
+else{
+document.write('<div style="position:absolute;top:0px;left:0px"><div style="position:relative">');
+for (i = 0; i < Amount; i++){
+document.write('<img id="si" src="'+Image0.src+'" style="position:absolute;top:0px;left:0px;filter:alpha(opacity=60)">');
+}
+document.write('</div></div>');
+}
+function bubbles(){
+var WinHeight=(document.layers)?window.innerHeight:window.document.body.clientHeight;
+var WinWidth=(document.layers)?window.innerWidth:window.document.body.clientWidth;
+var hscrll=(document.layers)?window.pageYOffset:document.body.scrollTop;
+var wscrll=(document.layers)?window.pageXOffset:document.body.scrollLeft;
+for (i=0; i < Amount; i++){
+sy = Speed[i]*Math.sin(270*Math.PI/180);
+sx = Speed[i]*Math.cos(Cstep[i]);
+Ypos[i]+=sy;
+Xpos[i]+=sx; 
+rate[i]=0.4;
+if (Ypos[i] < -50){
+Ypos[i]=WinHeight+50;
+Xpos[i]=Math.round(Math.random()*WinWidth);
+Speed[i]=Math.random()*4+6;
+
+grow[i]=2;
+nsSize[i]=Math.random()*15+5;
+}
+if (ns){
+document.layers['sn'+i].left=Xpos[i]+wscrll;
+document.layers['sn'+i].top=Ypos[i]+hscrll;
+}
+else{
+si[i].style.pixelLeft=Xpos[i]+wscrll;
+si[i].style.pixelTop=Ypos[i]+hscrll;
+si[i].style.width=grow[i];
+si[i].style.height=grow[i]; 
+}
+grow[i]+=rate[i]; 
+Cstep[i]+=Step[i];
+if (grow[i] > 24) grow[i]=25;
+}
+setTimeout('bubbles()',10);
+}
+bubbles();
+//-->
+</SCRIPT>
+
+<P align=center><br>
+<BR><IMG height=239 
+src="one.jpg" width=237 border=0><IMG height=239 
+src="two.jpg" width=215 border=0><IMG height=239 
+src="three.jpg" width=184 border=0></P>
+
+<div align="center">
+  <center>
+  <table border="0" width="500" cellspacing="0" cellpadding="0">
+    <tr>
+      <td width="100%">
+        <p align="center"><font color="#FFFFFF">
+        <br>
+        </font><font color="#FFFFFF">
+        <br>
+        </font></p>
+      </td>
+    </tr>
+  </table>
+  </center>
+</div>
+<div align="center">
+  <center>
+  <table border="0" width="500" cellspacing="0" cellpadding="0">
+    <tr>
+      <td width="16%">
+        <p align="center"><a href="hai/hai.htm"><font color="#9CBEB5">日光海岸</font></a></td>
+      <td width="16%">
+        <p align="center"><a href="hupan/hupan.htm"><font color="#9CBEB5">琉璃湖畔</font></a></td>
+      <td width="17%">
+        <p align="center"><a href="xianjing/xianjing.htm"><font color="#9CBEB5">仙境</font></a></td>
+      <td width="17%">
+        <p align="center"><a href="mwsl/lang.htm"><font color="#9CBEB5">迷雾森林</font></a></td>
+      <td width="17%">
+        <p align="center"><a href="qingshi/xian.htm"><font color="#9CBEB5">大自然情诗</font></a></td>
+      <td width="17%">
+        <p align="center"><a href="shanlin/shanlin.htm"><font color="#9CBEB5">寂静山林</font></a></td>
+    </tr>
+    <tr>
+      <td width="16%">
+        <p align="center"><a href="sky/sky.htm"><font color="#9CBEB5">蓝色天际</font></a></td>
+      <td width="16%">
+        <p align="center"><a href="moon/moon.htm"><font color="#9CBEB5">森林之月</font></a></td>
+      <td width="17%">
+        <p align="center"><a href="Spring/Spring.htm"><font color="#9CBEB5">春野</font></a></td>
+      <td width="17%">
+        <p align="center"><a href="yougu/yougu.htm"><font color="#9CBEB5">微风山谷</font></a></td>
+      <td width="17%">
+        <p align="center"><a href="laiyin/moon.htm"><font color="#9CBEB5">莱茵河波影</font></a></td>
+      <td width="17%">
+        <p align="center"><a href="mgarden/mgarden.htm"><font color="#9CBEB5">梦花园</font></a></td>
+    </tr>
+  </table>
+  </center>
+</div>
+
+<P align=center><font color="#BEBEBE"><br>
+</font><font color="#383438">.<img border="0" src="meng.jpg" width="97" height="73"></font></P>
+
+<DIV align=center>
+<TABLE cellSpacing=0 cellPadding=0 width="788" border=0>
+  <TBODY>
+  <TR>
+    <TD width="39%">
+      <P align=right><IMG height=28 src="firefly2.gif" width=23 
+      border=0></P></TD>
+    <CENTER>
+    <TD width="24%">
+      <p align="center"><a href="../club/garden.html"><font color="#9CBEB5">返回主页</font></a></TD>
+    <TD width="37%"><IMG height=28 src="firefly2.gif" width=23 
+      border=0></TD></center></TR></TBODY></TABLE></DIV><video autoplay="autoplay" src="meng.mp3" controls="controls" preload id="p-music" loop="loop" hidden="true"></video>
+
+
+</BODY>
+
+<script language="javascript" type="text/javascript">
+	document.onclick = function(event){
+		event = (event || window.event);
+		var audio = document.getElementById('p-music');
+		audio.play();
+		audio.muted = false;
+	}
+
+</script></HTML>

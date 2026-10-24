@@ -1,0 +1,2 @@
+# Preserve archived encodings, line endings and media exactly as downloaded.
+data/original/* -text -diff
