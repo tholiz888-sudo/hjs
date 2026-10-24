@@ -21,9 +21,25 @@ async function handleCommunity(req,res,{base=''}){
    if(p==='/api/messages'&&method==='POST'){if(!user)return json(401,{error:'请先注册或登录后留言'});return json(200,store.submit(user,await read(req)))}
    return json(404,{error:'接口不存在'});
   }
-  if(p!==''&&p!=='/')return json(404,{error:'页面不存在'});if(!['GET','HEAD'].includes(method))return json(405,{error:'不支持此请求'});
-  res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; script-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"});
-  res.end(method==='HEAD'?undefined:`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>秘密花园 · 留言板</title><style>body{margin:0;padding:35px 18px;background:#9ab096 url('${e(base)}/garden/view/garden2018.jpg') fixed;color:#3e5a38;font:16px/1.9 Georgia,'Microsoft YaHei',serif}main{max-width:820px;margin:auto;padding:28px;background:#e2e8cbed;border:5px double #678264}a{color:#40694c}h1{text-align:center;font-weight:normal}section,article{border-bottom:1px solid #9cab85;padding:18px 0}label{display:block}input,textarea,button{box-sizing:border-box;font:inherit;padding:7px;border:1px solid #82936d;background:#f4f4e7;color:#345236;border-radius:3px}input,textarea{width:100%;margin:6px 0 12px}button{cursor:pointer;margin:6px 8px 6px 0}button:disabled{opacity:.5;cursor:default}small{opacity:.8}.text{white-space:pre-wrap;overflow-wrap:anywhere}blockquote{border-left:3px solid #82936d;padding-left:15px;margin-left:10px}#notice{white-space:pre-wrap}#notice.error{color:#9c2f26}.links{display:flex;gap:20px;flex-wrap:wrap}</style></head><body data-base="${e(base)}"><main><div class="links"><a href="${e(base)}/garden">‹ 返回秘密花园</a><a href="${e(base)}/garden/view/liuyan/default.asp">历史留言</a></div><h1>花园留言板</h1><p>把此刻的心情，留在花园里。</p><p id="notice" role="status" aria-live="polite"></p><section id="account"></section><section id="compose" hidden><h2>写下你的留言</h2><form id="message-form"><label>标题（可选）<input name="title" maxlength="80"></label><label>留言内容<textarea name="body" maxlength="2000" rows="5" required></textarea></label><small>留言经管理员审核后公开，请勿填写密码或其他私密信息。</small><br><button>提交留言</button></form></section><section><h2>花园里的声音</h2><div id="messages">正在读取留言…</div><button id="prev">上一页</button><span id="pagination"></span><button id="next">下一页</button></section></main><script src="${e(base)}/garden/community/app.js" defer></script></body></html>`);
+  const action=p.match(/^\/action\/(register|login|logout|messages)$/)?.[1];
+  if(!action&&p!==''&&p!=='/')return json(404,{error:'页面不存在'});
+  if(action?method!=='POST':!['GET','HEAD'].includes(method))return json(405,{error:'不支持此请求'});
+  const {researchCall}=require('./admin.cjs');let handler,user=null,error='',notice='',data=null;
+  const getHandler=async()=>handler??=await require('./research-handler.cjs').researchHandler(base,()=>require('./views').renderNavigation('/research',base).replace(/class="primary-nav"/g,'class="portal-primary-nav"').replace(/class="brand"/g,'class="portal-brand"').replace(/class="category-nav"/g,'class="portal-category-nav"'));
+  const call=async(endpoint,input)=>researchCall(await getHandler(),req,base,endpoint,input);
+  try{const result=await call('session');if(result.status!==200)throw Error('账号服务暂时不可用');user=result.value.user;if(user){if(!store.member(user.id))store.join(user);user={id:user.id,nickname:user.nickname,email:user.email,muted:!!store.member(user.id)?.muted}}}catch{error='账号状态暂时无法读取，仍可浏览留言；请稍后重新登录。'}
+  if(action){
+   try{
+    if(!/^application\/x-www-form-urlencoded(?:;|$)/i.test(req.headers['content-type']||''))throw Error('表单格式不正确');let text='';for await(const chunk of req){text+=chunk;if(Buffer.byteLength(text)>32768)throw Error('表单内容过大')}const input=Object.fromEntries(new URLSearchParams(text));
+    if(action==='messages'){if(!user)throw Error('请先注册或登录后留言');store.submit(user,input)}
+    else{const result=await call(action,input);if(result.status!==200)throw Error(result.value.error||'账号操作失败');if(result.value.user)store.join(result.value.user,action==='register'?'garden-register':'existing');const cookie=result.headers['set-cookie'];if(cookie)res.setHeader('Set-Cookie',[cookie.replace(/Path=[^;]+/,`Path=${base||'/'}`),`jiange_session=; HttpOnly; SameSite=Strict; Path=${base}/research; Max-Age=0`])}
+    res.writeHead(303,{Location:base+'/garden/community?notice='+action+'#compose','Cache-Control':'no-store'});return res.end();
+   }catch(failure){error=failure.message}
+  }
+  const notices={register:'注册成功，欢迎来到秘密花园。',login:'登录成功。',logout:'已退出登录。',messages:'留言已提交，审核通过后会公开显示。'};notice=notices[u.searchParams.get('notice')]||'';
+  try{data=store.messages(Object.fromEntries(u.searchParams),true)}catch{error=error||'留言暂时无法读取，请稍后刷新重试。'}
+  res.writeHead(action?400:200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; script-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"});
+  res.end(method==='HEAD'?undefined:require('./garden-community-page.cjs').renderCommunity({base,user,data,error,notice,page:data?.page||1}));
  }catch(error){return json(400,{error:error.message})}
 }
 module.exports={handleCommunity};
