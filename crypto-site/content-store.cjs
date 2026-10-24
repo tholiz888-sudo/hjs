@@ -201,7 +201,7 @@ function dashboard() {
     counts: { articles: all.filter(a => a.status !== 'trash').length, published: all.filter(a => a.status === 'published').length, draft: all.filter(a => a.status === 'draft').length,
       trash: all.filter(a => a.status === 'trash').length, categories: allCategories().length, exchanges: config().exchanges.length }, coreIds: [...coreIds] };
 }
-function backup() { return { format: 'portal-content', version: 1, exportedAt: new Date().toISOString(), categories: allCategories(), settings: config(), articles: list() }; }
+function backup() { return { format: 'portal-content', version: 1, exportedAt: new Date().toISOString(), categories: allCategories(), settings: config(), articles: list(), garden: require('./garden-store.cjs').exported() }; }
 function restore(input, actor) {
   if (input.format !== 'portal-content' || input.version !== 1) throw Error('不是本站支持的备份文件');
   const cats = validateCategories(input.categories);
@@ -211,14 +211,15 @@ function restore(input, actor) {
   const exchanges = input.settings.exchanges.map(validateExchange);
   if (new Set(exchanges.map(x => x.id)).size !== exchanges.length) throw Error('备份交易所标识重复');
   if (!Array.isArray(input.articles) || input.articles.length > 5000) throw Error('文章备份格式不正确');
+  const garden=input.garden===undefined?null:require('./garden-store.cjs').validateBackup(input.garden);
   db().exec('BEGIN');
   try {
     putSetting('categories', cats); putSetting('site', site); putSetting('exchanges', exchanges);
     const rows = input.articles.map(a => validateArticle(a, cats));
     if (new Set(rows.map(a => a.slug)).size !== rows.length || originals.some(a => !rows.some(r => r.slug === a.slug))) throw Error('备份文章重复或缺少内置文章');
     if (exchanges.some(x => x.tutorialSlug && !rows.some(a => a.slug === x.tutorialSlug))) throw Error('备份的交易所教程不存在');
-    db().exec('DELETE FROM articles'); rows.forEach(writeArticle); audit(actor, '恢复内容备份', rows.length + ' 篇文章'); db().exec('COMMIT');
+    db().exec('DELETE FROM articles'); rows.forEach(writeArticle); if(garden)require('./garden-store.cjs').importData(garden); audit(actor, '恢复内容备份', rows.length + ' 篇文章'); db().exec('COMMIT');
   } catch (error) { db().exec('ROLLBACK'); throw error; }
   refresh();
 }
-module.exports = { list, refresh, save, articleAction, allCategories, tree, config, saveCategory, deleteCategory, saveExchange, deleteExchange, saveSite, dashboard, backup, restore };
+module.exports = { list, refresh, save, articleAction, allCategories, tree, config, saveCategory, deleteCategory, saveExchange, deleteExchange, saveSite, dashboard, backup, restore, database: db, audit };

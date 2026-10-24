@@ -30,7 +30,7 @@
     const c = state.counts;
     workspace.innerHTML = heading('管理工作台', '从内容发布到推荐链接，在这里管理网站的日常运营。', '<a class="button primary" href="#article/new">＋ 发布文章</a>') +
       `<div class="stats-grid">${[[c.articles, '文章总数', c.published + ' 篇已发布 · ' + c.draft + ' 篇草稿'], [c.categories, '栏目与子栏目', '按层级组织内容与导航'], [c.exchanges, '交易所入口', '链接、邀请码与活动说明'], [c.trash, '回收站', '可恢复为草稿，避免误删内容']].map(([count, title, note]) => `<div class="stat-card"><small>${title}</small><strong>${count}</strong><p>${note}</p></div>`).join('')}</div>` +
-      `<div class="two-columns"><div><section class="card"><div class="card-heading"><h2>常用操作</h2><span class="muted">内容运营</span></div><div class="quick-grid"><a class="quick-link" href="#article/new">＋ 写一篇新文章<small>栏目、正文、封面与 SEO</small></a><a class="quick-link" href="#category/new">＋ 添加栏目<small>父子层级、排序与导航位置</small></a><a class="quick-link" href="#exchanges">管理交易所优惠<small>更新注册链接与邀请码</small></a><a class="quick-link" href="#settings">调整网站设置<small>站名、介绍与社群链接</small></a></div></section><section class="card"><div class="card-heading"><h2>应用管理入口</h2><span class="muted">沿用原有完整后台</span></div><div class="module-cards"><div class="module-card"><h3>天机看盘</h3><p>策略、选币、文章、会员与服务设置。</p><a href="${base}/admin/research">进入天机看盘后台 →</a></div><div class="module-card"><h3>BIT浪浪研究室</h3><p>交易记录与用户管理。</p><a href="${base}/admin/review">进入BIT浪浪研究室后台 →</a></div></div></section><div class="notice">前台保留原有模板。这里保存的栏目、文章、交易所信息会直接应用到网站，无需重新部署。</div></div><section class="card"><div class="card-heading"><h2>最近操作</h2><span class="muted">北京时间</span></div>${auditList()}</section></div>`;
+      `<div class="two-columns"><div><section class="card"><div class="card-heading"><h2>常用操作</h2><span class="muted">内容运营</span></div><div class="quick-grid"><a class="quick-link" href="#article/new">＋ 写一篇新文章<small>栏目、正文、封面与 SEO</small></a><a class="quick-link" href="#category/new">＋ 添加栏目<small>父子层级、排序与导航位置</small></a><a class="quick-link" href="#exchanges">管理交易所优惠<small>更新注册链接与邀请码</small></a><a class="quick-link" href="#settings">调整网站设置<small>站名、介绍与社群链接</small></a></div></section><section class="card"><div class="card-heading"><h2>应用管理入口</h2><span class="muted">沿用原有完整后台</span></div><div class="module-cards"><div class="module-card"><h3>秘密花园</h3><p>发布新篇、编辑原页面、选择音乐与配图。</p><a href="#garden">进入秘密花园后台 →</a></div><div class="module-card"><h3>天机看盘</h3><p>策略、选币、文章、会员与服务设置。</p><a href="${base}/admin/research">进入天机看盘后台 →</a></div><div class="module-card"><h3>BIT浪浪研究室</h3><p>交易记录与用户管理。</p><a href="${base}/admin/review">进入BIT浪浪研究室后台 →</a></div></div></section><div class="notice">前台保留原有模板。这里保存的栏目、文章、交易所信息会直接应用到网站，无需重新部署。</div></div><section class="card"><div class="card-heading"><h2>最近操作</h2><span class="muted">北京时间</span></div>${auditList()}</section></div>`;
   }
   function articlesPanel() {
     workspace.innerHTML = heading('文章管理', '按栏目和状态整理文章，支持批量发布、下架、移动与回收。', '<a class="button primary" href="#article/new">＋ 新建文章</a>') +
@@ -100,7 +100,7 @@
   function backupPanel() {
     pendingBackup = null;
     workspace.innerHTML = heading('备份与恢复', '下载主站内容备份，或从之前导出的备份恢复。') +
-      `<div class="two-columns"><section class="card"><div class="card-heading"><h2>导出内容备份</h2><span class="badge">JSON 文件</span></div><p>包含主站文章、草稿、回收站、栏目层级、交易所配置和网站设置。</p><p class="hint">不包含管理员密码、登录会话、天机看盘与 BIT浪浪研究室的数据库或媒体文件。两个应用的数据需分别备份。</p><div class="backup-actions" style="margin-top:20px"><button class="primary" data-action="export-backup">下载内容备份</button></div></section><section class="card"><div class="card-heading"><h2>从备份恢复</h2></div><div class="notice warning">恢复会替换当前主站的文章和设置。请先下载当前备份，再选择可信的本站备份文件。</div><label>选择备份文件<input id="backup-file" type="file" accept=".json,application/json"></label><div id="backup-preview" hidden></div><button class="danger" data-action="restore-backup" disabled>确认恢复备份</button></section></div><section class="card"><h2>数据保存说明</h2><p class="hint">内容保存在服务器数据库。Render 免费实例重新部署或重建时，本地文件可能丢失。正式运营请配置持久磁盘并定期下载备份；内容备份不能代替两个应用数据库的完整备份。</p></section>`;
+      `<div class="two-columns"><section class="card"><div class="card-heading"><h2>导出内容备份</h2><span class="badge">JSON 文件</span></div><p>包含主站文章、草稿、回收站、栏目层级、交易所配置、网站设置，以及秘密花园的编辑内容和栏目。</p><p class="hint">不包含管理员密码、登录会话、天机看盘与 BIT浪浪研究室的数据库或秘密花园上传的图片文件。应用数据与媒体文件需分别备份。</p><div class="backup-actions" style="margin-top:20px"><button class="primary" data-action="export-backup">下载内容备份</button></div></section><section class="card"><div class="card-heading"><h2>从备份恢复</h2></div><div class="notice warning">恢复会替换当前主站的文章和设置。请先下载当前备份，再选择可信的本站备份文件。</div><label>选择备份文件<input id="backup-file" type="file" accept=".json,application/json"></label><div id="backup-preview" hidden></div><button class="danger" data-action="restore-backup" disabled>确认恢复备份</button></section></div><section class="card"><h2>数据保存说明</h2><p class="hint">内容保存在服务器数据库。Render 免费实例重新部署或重建时，本地文件可能丢失。正式运营请配置持久磁盘并定期下载备份；内容备份不能代替两个应用数据库的完整备份。</p></section>`;
     $('#backup-file').onchange = async event => {
       pendingBackup = null; $('[data-action="restore-backup"]').disabled = true;
       const file = event.target.files[0]; if (!file) return;
@@ -117,8 +117,8 @@
     const [panel, id] = hash.slice(1).split('/');
     const section = ({ article: 'articles', category: 'categories', exchange: 'exchanges' })[panel] || panel;
     $$('[data-panel]').forEach(a => a.classList.toggle('active', a.dataset.panel === section));
-    $('#panel-title').textContent = ({ overview: '工作台', articles: '文章管理', categories: '栏目管理', exchanges: '交易所管理', settings: '网站设置', backup: '备份与恢复' })[section] || '工作台';
-    if (panel === 'articles') articlesPanel(); else if (panel === 'article') articleEditor(id || 'new');
+    $('#panel-title').textContent = ({ overview: '工作台', articles: '文章管理', categories: '栏目管理', exchanges: '交易所管理', settings: '网站设置', backup: '备份与恢复', garden: '秘密花园' })[section] || '工作台';
+    if (panel === 'garden') {window.GardenAdmin.render({workspace,base,api,message,markDirty,clearDirty:()=>{dirty=false},isDirty:()=>dirty}).catch(error=>message(error.message,true));} else if (panel === 'articles') articlesPanel(); else if (panel === 'article') articleEditor(id || 'new');
     else if (panel === 'categories' || panel === 'category') categoriesPanel(id);
     else if (panel === 'exchanges' || panel === 'exchange') exchangesPanel(id);
     else if (panel === 'settings') settingsPanel(); else if (panel === 'backup') backupPanel(); else overview();
@@ -128,8 +128,8 @@
   if (login) { login.onsubmit = async event => { event.preventDefault(); await submit($('button', login), async () => { await api('login', 'POST', Object.fromEntries(new FormData(login))); location.reload(); }); }; return; }
   if (!workspace) return;
   $('#logout').onclick = async () => { if (dirty && !confirm('修改尚未保存，确定退出登录吗？')) return; await submit($('#logout'), async () => { await api('logout', 'POST', {}); dirty = false; location.reload(); }); };
-  workspace.addEventListener('input', event => { if (event.target.closest('form')) markDirty(); });
-  workspace.addEventListener('change', event => { if (event.target.closest('form')) markDirty(); });
+  workspace.addEventListener('input', event => { if (event.target.closest('form') && event.target.id !== 'garden-image-query') markDirty(); });
+  workspace.addEventListener('change', event => { if (event.target.closest('form') && event.target.id !== 'garden-image-query') markDirty(); });
   document.addEventListener('click', event => { const a = event.target.closest('a'); if (a && !a.hash && a.target !== '_blank' && dirty && !confirm('当前修改尚未保存，确定离开吗？')) event.preventDefault(); });
   window.addEventListener('beforeunload', event => { if (dirty) { event.preventDefault(); event.returnValue = ''; } });
   window.addEventListener('hashchange', route);
