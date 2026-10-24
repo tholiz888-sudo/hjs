@@ -8,7 +8,7 @@ test('garden registration, scoped member records, moderated guestbook, privacy, 
  const api='/garden/community/api',manage='/admin/api/garden';
  try{
   await start();const html=await ok('/garden/community');assert.match(html,/秘密花园留言本/);assert.match(html,/name="email"/);assert.match(html,/action="[^"]+\/action\/login"/);assert.doesNotMatch(html,/正在读取留言/);assert.match(html,/community\/app.js/);assert.match(await ok('/garden'),/garden\/community/);
-  assert.equal((await req(manage+'/messages')).status,401);assert.equal((await req(manage+'/users')).status,401);assert.equal((await req(api+'/messages','POST',{body:'匿名'})).status,401);
+  assert.equal((await req(manage+'/messages')).status,401);assert.equal((await req(manage+'/users')).status,401);assert.equal((await req(api+'/messages','POST',{body:'匿名'})).status,400);
   assert.equal((await req(api+'/register','POST',{email:'a@example.com',password:'password123'},null,{Origin:'https://evil.example'})).status,403);
   const registered=await req(api+'/register','POST',{email:'flower@example.com',password:'flower-pass-123'});assert.equal(registered.status,200,JSON.stringify(registered.value));assert.match(registered.headers.get('set-cookie'),/Path=\/crypto;/);user=registered.headers.getSetCookie()[0].split(';')[0];assert.doesNotMatch(JSON.stringify(registered.value),/password|bootstrap|session/);
   const who=await ok(api+'/session','GET',undefined,user);assert.equal(who.user.email,'flower@example.com');
@@ -31,6 +31,12 @@ test('garden registration, scoped member records, moderated guestbook, privacy, 
   await ok(manage+'/users','POST',{id:who.user.id,muted:false},admin);assert.equal((await ok(api+'/session','GET',undefined,user)).user.muted,false);
   await ok(api+'/logout','POST',{},user);assert.equal((await ok(api+'/session','GET',undefined,user)).user,null);
   assert.equal((await req(api+'/login','POST',{email:'flower@example.com',password:'bad-pass-123'})).status,401);
+  const guestPage=await req('/garden/community'),guestCookie=guestPage.headers.getSetCookie().find(c=>c.startsWith('garden_visitor=')).split(';')[0],guestToken=guestPage.value.match(/name="captchaToken" value="([a-f0-9]+)"/)[1];
+  const svg=await ok('/garden/community/captcha/'+guestToken+'.svg','GET',undefined,guestCookie),answer=[...svg.matchAll(/<text[^>]*>([0-9])<\/text>/g)].map(m=>m[1]).join('');assert.equal(answer.length,4);
+  assert.equal((await req(api+'/messages','POST',{nickname:'访客',body:'错误验证码',captchaToken:guestToken,captcha:'wrong'},guestCookie)).status,400);
+  const guestMessage=await ok(api+'/messages','POST',{nickname:'无需账号的访客',body:'未注册账号也能留言',captchaToken:guestToken,captcha:answer,avatar:'/liuyan/images/image7/1.gif'},guestCookie);assert.equal(guestMessage.status,'pending');
+  const guestRecord=(await ok(manage+'/messages?q='+encodeURIComponent('未注册账号也能留言'),'GET',undefined,admin)).items[0];assert.equal(guestRecord.email,'');assert.equal(guestRecord.nickname,'无需账号的访客');await ok(manage+'/messages','POST',{id:guestMessage.id,status:'published',reply:'欢迎访客'},admin);assert.equal((await ok(api+'/messages?q='+encodeURIComponent('未注册账号也能留言'))).items[0].reply,'欢迎访客');assert.equal((await ok(manage+'/users','GET',undefined,admin)).total,1);
+  assert.equal((await req(api+'/messages','POST',{nickname:'访客',body:'重放验证码',captchaToken:guestToken,captcha:answer},guestCookie)).status,400);
   const secretRegistration=await req(api+'/register','POST',{email:'secret@example.com',password:'secret-test-password'}),secretCookie=secretRegistration.headers.getSetCookie()[0].split(';')[0];
   assert.equal((await req(api+'/messages','POST',{body:'invalid avatar',avatar:'https://evil.example/avatar.gif'},secretCookie)).status,400);
   assert.equal((await req(api+'/messages','POST',{body:'invalid nickname',nickname:'长'.repeat(21)},secretCookie)).status,400);
