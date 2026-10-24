@@ -1,0 +1,2 @@
+# Keep verified third-party runtime artifacts intact and avoid minified diffs.
+ruffle/* -text -diff

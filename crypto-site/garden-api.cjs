@@ -12,8 +12,8 @@ async function handleGardenApi({req,res,p,u,json,read,actor,base}){
  if(route==='/export'&&method==='GET')return json(200,store.exported());
  if(route==='/preview'&&method==='GET'){
   const page=store.get(u.searchParams.get('id')),prefix=base+'/garden/view';const {prepareDocument}=await import('./garden/presentation.mjs');
-  const bytes=prepareDocument(store.pageHTML(page,prefix),{prefix,pagePath:page.path,...store.presentation(page.path,prefix),title:page.title});
-  res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','X-Robots-Tag':'noindex, nofollow','Content-Security-Policy':"sandbox allow-scripts allow-popups; default-src 'self' data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'none'; object-src 'none'; form-action 'none'; base-uri 'self'"});return res.end(bytes);
+  const bytes=prepareDocument(store.pageHTML(page,prefix),{prefix,pagePath:page.path,availablePaths:store.effectPaths(),...store.presentation(page.path,prefix),title:page.title});
+  res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','X-Robots-Tag':'noindex, nofollow','Content-Security-Policy':"sandbox allow-scripts allow-popups; default-src 'self' data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; form-action 'none'; base-uri 'self'"});return res.end(bytes);
  }
  return json(404,{error:'花园管理接口不存在'});
 }

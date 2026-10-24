@@ -1,11 +1,12 @@
 import {localize} from './archive.mjs';
+import {installEffects} from './effects.mjs';
 export function decodeDocument(buffer,type=''){
  if(typeof buffer==='string')return buffer;
  const first=buffer.subarray(0,8192).toString('latin1'),encoding=type.match(/charset\s*=\s*["']?([\w-]+)/i)?.[1]||first.match(/charset\s*=\s*["']?([\w-]+)/i)?.[1];
  if(encoding){try{return new TextDecoder(encoding).decode(buffer)}catch{}}
  try{return new TextDecoder('utf-8',{fatal:true}).decode(buffer)}catch{return new TextDecoder('gb18030').decode(buffer)}
 }
-export function prepareDocument(buffer,{type='',prefix='',pagePath='/',title,musicPath,hiddenPaths=[],renames=[],extraHTML=''}={}){
+export function prepareDocument(buffer,{type='',prefix='',pagePath='/',title,musicPath,hiddenPaths=[],renames=[],extraHTML='',availablePaths}={}){
  let html=localize(Buffer.from(decodeDocument(buffer,type)),prefix).toString('utf8');
  const attribute=(attrs,key)=>attrs.match(new RegExp('\\b'+key+'\\s*=\\s*(?:"([^"]*)"|\'([^\']*)\'|([^\\s>]+))','i'))?.slice(1).find(x=>x!==undefined)||'';
  const external=value=>/^(?:https?:|\/\/|mailto:|ftp:|tel:)/i.test(value)||/https?:\/\//i.test(value);
@@ -23,6 +24,7 @@ export function prepareDocument(buffer,{type='',prefix='',pagePath='/',title,mus
  if(extraHTML)html=/<\/body>/i.test(html)?html.replace(/<\/body>/i,()=>extraHTML+'</body>'):html+extraHTML;
  const directory=pagePath.split('?')[0].replace(/[^/]*$/,'');const base=`<meta charset="utf-8"><base href="${escapeHTML(prefix+directory)}">`;
  html=/<head\b[^>]*>/i.test(html)?html.replace(/<head\b[^>]*>/i,tag=>tag+base):base+html;
+ html=installEffects(html,{prefix,pagePath,availablePaths});
  return Buffer.from(html);
 }
 function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
