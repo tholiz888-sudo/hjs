@@ -1,2 +1,6 @@
-// Account forms, messages and pagination are rendered by the server and work without fetch or JavaScript.
-(()=>{if(location.hash==='#compose'){const form=document.querySelector('#compose:not([hidden])')||document.getElementById('account');form?.scrollIntoView({block:'start'})}})();
+// Native forms and server-rendered messages continue to work without JavaScript or fetch.
+(()=>{const form=document.getElementById('message-form'),body=form?.elements.body;
+const update=()=>{if(!body)return;document.getElementById('thenum').textContent=body.value.length;document.getElementById('thenum2').textContent=Math.max(0,2000-body.value.length)};
+body?.addEventListener('input',update);form?.addEventListener('reset',()=>{setTimeout(update,0);document.getElementById('message-preview').hidden=true});update();
+const preview=document.getElementById('preview-message');if(preview){preview.hidden=false;preview.onclick=()=>{if(!form.reportValidity())return;document.getElementById('preview-title').textContent=form.elements.title.value||'无标题';document.getElementById('preview-name').textContent=form.elements.nickname.value+(form.elements.private.checked?'（悄悄话，仅管理员可见）':'');document.getElementById('preview-body').textContent=body.value;const box=document.getElementById('message-preview');box.hidden=false;box.scrollIntoView({block:'nearest'})}};
+if(location.hash==='#compose'){const target=document.querySelector('#compose:not([hidden])')||document.getElementById('account');target?.scrollIntoView({block:'start'})}})();
