@@ -9,7 +9,7 @@ test('garden publishing, original-page overrides, media, category visibility, ba
  try{
   await start();assert.equal((await request(api+'/pages')).status,401);assert.equal((await request(api+'/preview?id=anything')).status,401);
   const login=await request('/admin/api/login','POST',{email:'garden-owner@example.com',password:'test-garden-owner-password'});assert.equal(login.status,200);cookie=login.headers.getSetCookie().find(c=>!c.includes('Max-Age=0')).split(';')[0];
-  assert.match(await ok('/admin'),/data-panel="garden"/);const first=await ok(api+'/pages');assert.ok(first.total>1000);assert.equal(first.items.length,20);
+  const adminHTML=await ok('/admin');assert.match(adminHTML,/<nav class="module-nav">[\s\S]*?天机看盘后台[\s\S]*?BIT浪浪研究室后台[\s\S]*?data-panel="garden"/);assert.doesNotMatch(adminHTML.match(/<nav aria-label="后台功能导航">([\s\S]*?)<\/nav>/)[1],/秘密花园/);const first=await ok(api+'/pages');assert.ok(first.total>1000);assert.equal(first.items.length,20);
   const media=await ok(api+'/media?type=music');assert.equal(media.items.length,163);const musicId=media.items[0].id;
   const input={id:'new',slug:'garden-test-story',title:'花园测试新篇',category:'shiji',body:'一段安静的文字。\n\n第二段文字。<script>throw 1</script>',summary:'只给管理员看的草稿',status:'draft',musicId};
   assert.equal((await request(api+'/page','POST',input,true,{Origin:'https://untrusted.example'})).status,403);
