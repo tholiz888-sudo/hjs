@@ -65,3 +65,13 @@
 旧留言本地址顶层访问时也输出同一完整留言页；在花园隔离框架内访问旧入口时，通过仅接受当前子框架的固定页码导航转入完整留言页，避免在隔离框架里提交表单。旧#nicheng锚点与compose都可定位到填写区，不再展示一套只有历史记录、无法填写的页面。
 
 验证码回归：`node --test crypto-site/tests/garden-captcha.test.cjs`，覆盖多页刷新、访客cookie变化、全角和空格输入、过期、重复使用、错误次数与提交间隔；浏览器流程覆盖错误后内容保留与使用新图重试。
+
+## 图片网址水印局部修复
+
+已接入323张静态图片的局部修复版本；文件位于data/cleaned，原文件仍在data/original，原页面图片网址与尺寸保持不变。修复仅使用审核过的局部区域，输出无损PNG以避免整张JPEG再次压缩。manifest.json记录原文件和修复文件SHA-256、原尺寸、修复区域和区域外像素检查结果。区域外RGB逐像素一致；原作者署名、正文与非网址文字保留。该区域内被水印覆盖的画面属于局部重建，不宣称恢复了不可见的原始像素。
+
+检查覆盖3256个图片文件、547张小图放大复核、2404张图片下缘放大复核，以及162个GIF的2450帧；GIF未检测出网址，保留原文件、帧数及速度。Flash检查295张内嵌位图及可解析的文字定义，修复water.swf的两张背景位图，并清空blue/heaven/prettyboy中六个只包含网址的文字定义。共4个Flash修复文件，保留角色ID、所有无关标签、脚本、声音和时间轴；内嵌位图透明度保留，网站文字之外的署名未移除。自动识别有漏检可能，不将“未识别到”视为人工确认绝无水印。
+
+archive.mjs仅在原文件和修复文件哈希匹配、尺寸正确且已审核时启用对应版本；修复文件缺失或校验失败会读取原图。GARDEN_CLEAN_IMAGES=0可整体退回原始图片与Flash。花园健康接口新增cleanedImages和cleanedAnimations计数。修复不接触账号、留言、文章数据库及背景音乐。
+
+只读像素复核：python garden/tools/verify-image-repairs.py（需Pillow和numpy）。接口、哈希及Flash无关标签验证：node --test tests/garden-image-overrides.test.cjs。浏览器实际显示：node tests/garden-clean-images-browser.mjs。
