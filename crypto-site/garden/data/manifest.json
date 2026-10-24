@@ -34714,6 +34714,76 @@
       "status": 200,
       "type": "text/html",
       "bytes": 57508
+    },
+    {
+      "url": "http://www.yini.org/welcome/java/kissrain.jpg",
+      "file": "ee61b7cbd6ef402f0090003e.jpg",
+      "status": 200,
+      "type": "image/jpeg",
+      "bytes": 44162
+    },
+    {
+      "url": "http://www.yini.org/welcome/java/irisa.jpg",
+      "file": "3d11825a60f9e3bb65ee8d67.jpg",
+      "status": 200,
+      "type": "image/jpeg",
+      "bytes": 11970
+    },
+    {
+      "url": "http://www.yini.org/welcome/java/irisb.gif",
+      "file": "5878e03421980e5d0227b9f5.gif",
+      "status": 200,
+      "type": "image/gif",
+      "bytes": 24452
+    },
+    {
+      "url": "http://www.yini.org/welcome/java/winter.jpg",
+      "file": "751baa9dd902ab0920be1767.jpg",
+      "status": 200,
+      "type": "image/jpeg",
+      "bytes": 61377
+    },
+    {
+      "url": "http://www.yini.org/welcome/java/bvela.jpg",
+      "file": "1f7a411396da2278894a7a4e.jpg",
+      "status": 200,
+      "type": "image/jpeg",
+      "bytes": 44057
+    },
+    {
+      "url": "http://www.yini.org/welcome/java/bvelb.jpg",
+      "file": "e4a3e3373080f158f4d68a2f.jpg",
+      "status": 200,
+      "type": "image/jpeg",
+      "bytes": 43342
+    },
+    {
+      "url": "http://www.yini.org/welcome/java/yanhua/media/yanhua.jpg",
+      "file": "33cb4c8d55306b47041526d4.jpg",
+      "status": 200,
+      "type": "image/jpeg",
+      "bytes": 78124
+    },
+    {
+      "url": "http://www.yini.org/welcome/java/yanhua/media/shoot.ogg",
+      "file": "f7b33d76b3c0eed00c4ea3be.ogg",
+      "status": 200,
+      "type": "audio/ogg",
+      "bytes": 2941
+    },
+    {
+      "url": "http://www.yini.org/welcome/java/yanhua/media/explode.ogg",
+      "file": "307c5aa5a67c4ae98b470990.ogg",
+      "status": 200,
+      "type": "audio/ogg",
+      "bytes": 4917
+    },
+    {
+      "url": "http://www.yini.org/welcome/java/yanhua/media/xqx.ogg",
+      "file": "92bd5f08f38a5e992a4498a8.ogg",
+      "status": 200,
+      "type": "audio/ogg",
+      "bytes": 1500017
     }
   ]
 }

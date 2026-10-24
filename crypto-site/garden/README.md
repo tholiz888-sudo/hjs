@@ -4,7 +4,7 @@
 
 进入后不加载门户的蓝色CSS或行情脚本，使用原站绿色背景、原始图片、文字排版和逐页背景音乐；只提供轻量的返回主站按钮。花园页面位于隔离框架中，原脚本不能操作主站账号或顶层页面。
 
-资源在 `data/original`，清单为 `data/manifest.json`。4,860个成功采集文件全部纳入，包括163首MP3；音频支持流式Range播放。访问 `/crypto/garden/view/api/health` 可核对导入数量。
+资源在 `data/original`，清单为 `data/manifest.json`。4,870个成功采集文件全部纳入，包括163首MP3；音频支持流式Range播放。访问 `/crypto/garden/view/api/health` 可核对导入数量。
 
 已知缺失：13个原站/meng/音乐地址返回404；部分历史失效图片/链接；留言提交与验证码尚未重建。Flash已接入本地Ruffle兼容播放；Java旧插件改用Canvas实现，原图缺失时会明确标记待补齐。保留已取得的历史留言，禁止提交回原站，不用其他音乐冒充缺失曲目。
 
@@ -26,6 +26,6 @@
 - 已采集的15个Flash页面使用同站自托管Ruffle 0.7.1（MIT/Apache-2.0），原SWF保留；不要求安装Flash。运行包来源与完整性在compat/ruffle/SOURCE.json，许可证随包保存。
 - 4个Java Applet页面按原参数尺寸实现雨、雪、湖面倒影和渐变，不再运行Java插件。这些不是原Java字节码的逐指令模拟。
 - 点击烟花在原背景和OGG资源未补齐时使用Canvas交互实现；资源齐全后自动恢复原始H5引擎。
-- 原采集遗漏/welcome/java下6张Applet图片及烟花背景与3个OGG音效，共10项。补齐工具为tools/effect-assets-helper.zip，不重采整站。
+- 原采集遗漏的/welcome/java下6张Applet图片、烟花背景与3个OGG音效共10项，已于2026-10-24从用户补采包校验后纳入清单；烟花现在使用原始H5引擎及原音效。补采工具保留于tools/effect-assets-helper.zip。
 - Flash使用同源公共资源CORS，框架继续保持不允许同源身份的沙箱；主站私有接口不开放CORS。播放器外链操作关闭。
 - 测试node --test crypto-site/tests/garden-effects.test.cjs；浏览器验证node crypto-site/tests/garden-effects-browser.mjs。
