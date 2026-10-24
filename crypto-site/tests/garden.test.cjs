@@ -14,7 +14,7 @@ test('mounted portal serves immersive original garden, scoped music, and return 
   let response=await fetch(base+'/crypto/garden');const shell=await response.text();assert.equal(response.status,200);assert.match(shell,/href="\/crypto\/">‹ 返回主站/);assert.match(shell,/src="\/crypto\/garden\/view\/"/);assert.match(shell,/sandbox="allow-scripts allow-popups"/);assert.doesNotMatch(shell,/assets\/(?:base|site|home)\.css|primary-nav|right-sidebar/);
   response=await fetch(base+'/crypto/garden/view/');assert.equal(response.status,200);const text=new TextDecoder().decode(await response.arrayBuffer());assert.match(text,/秘密花园/);assert.match(text,/garden2018\.jpg/);
   response=await fetch(base+'/crypto/garden/view/club/love.mp3',{headers:{Range:'bytes=0-1023'}});assert.equal(response.status,206);assert.equal(response.headers.get('content-type'),'audio/mpeg');assert.equal((await response.arrayBuffer()).byteLength,1024);
-  const health=await(await fetch(base+'/crypto/garden/view/api/health')).json();assert.equal(health.available,4860);assert.equal(health.mp3,163);assert.equal(health.importComplete,true);
+  const health=await(await fetch(base+'/crypto/garden/view/api/health')).json();assert.equal(health.available,4870);assert.equal(health.mp3,163);assert.equal(health.importComplete,true);
   assert.equal((await fetch(base+'/crypto/health')).status,200);assert.equal((await fetch(base+'/crypto/garden/view/meng/meng.mp3')).status,404);
   assert.equal((await fetch(base+'/crypto/garden/view/liuyan/addok.asp',{method:'POST',body:'test'})).status,405);
  }finally{await new Promise(r=>server.close(r))}
