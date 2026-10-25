@@ -1,0 +1,55 @@
+{
+  "date": "2026-10-25",
+  "repairedCount": 11,
+  "newOverrides": 10,
+  "updatedOverrides": 1,
+  "totalImages": 977,
+  "pendingCount": 30,
+  "repaired": [
+    {
+      "original": "e8310aa6bd118bd381312bef.jpg",
+      "pagePath": "/girl/manhua03/m0011.jpg"
+    },
+    {
+      "original": "9a554401f209475044bae17f.jpg",
+      "pagePath": "/girl/manhua/mma0018.jpg"
+    },
+    {
+      "original": "f7f1e854f0ee150aec6b67a0.jpg",
+      "pagePath": "/girl/manhua2/mmb029.jpg"
+    },
+    {
+      "original": "edaee26eb907e0577fee5801.jpg",
+      "pagePath": "/girl/manhua2/mmb038.jpg"
+    },
+    {
+      "original": "a9c23f48ee3d48ac48d2052a.jpg",
+      "pagePath": "/girl/old/20011220/new/011.jpg"
+    },
+    {
+      "original": "ddff188e6224a41240922f4c.jpg",
+      "pagePath": "/girl/old/20011220/c01.jpg"
+    },
+    {
+      "original": "48fff2f62689ff0fe430aa8b.jpg",
+      "pagePath": "/girl/old/20011220/a08.jpg"
+    },
+    {
+      "original": "c4241af179a217ee45feb6eb.jpg",
+      "pagePath": "/girl/2/a01.jpg"
+    },
+    {
+      "original": "36a98c6df3e680538b70947b.gif",
+      "pagePath": "/hotline/doggy/yini-home3.gif"
+    },
+    {
+      "original": "1953f300edcb6d4982a79ecf.jpg",
+      "pagePath": "/girl/mov/kiki/m0855.jpg"
+    },
+    {
+      "original": "d744b0fab4354edd505e9108.jpg",
+      "pagePath": "/girl/2/305.jpg"
+    }
+  ],
+  "pendingReason": "Earlier image editing batch rejected by image service; originals preserved. No retry or bypass attempted."
+}
