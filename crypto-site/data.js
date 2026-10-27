@@ -460,4 +460,6 @@ articles.push({
   ]
 });
 
+articles.push(...require('./technical-articles.cjs'));
+
 module.exports={categories,articles};
