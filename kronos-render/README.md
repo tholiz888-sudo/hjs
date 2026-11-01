@@ -5,6 +5,8 @@
 
 ## 当前免费在线方案：GitHub Actions
 
+首轮真实任务已成功：[GitHub Actions #2](https://github.com/tholiz888-sudo/hjs/actions/runs/41311535915)。实际生成 BTCUSDT / 1h，512 根已收盘历史 K 线和 3 条不同的未来 24 根路径，生成时间为 2026-11-01 13:31:50 UTC。结果已提交到 Render 绑定分支，已用本地 HTTP 请求及网页渲染逻辑验证读取、24 行汇总和 3 条路径绘制。Render 线上部署状态仍无法从当前云环境核验。此次功能验证不代表预测准确率验证。
+
 现有 hjs 仓库已通过 GitHub 仓库页面确认是 Public。GitHub 标准 runner 用于公开仓库的规则见官方 GitHub Actions 计费文档；此任务强制公开仓库才运行，固定 ubuntu-latest 标准 runner，最长 20 分钟，不使用付费大型 runner，不设置定时任务。
 
 **不需要 Hugging Face 账号、Space 或 PRO。** 之前的 HF Spaces CPU 免费方案已被用户实际创建页面否定，`hf-space/` 仅保留为历史备选，不是本方案的依赖。
