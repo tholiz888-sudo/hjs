@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kronos · 市场路径观察</title><link rel="stylesheet" href="/kronos/style.css"><script defer src="/kronos/app.js"></script></head>
+<body><main><nav><a href="/">← 返回网站</a><span>KRONOS SMALL / 研究工具</span></nav><header><p class="eyebrow">MARKET SCENARIOS</p><h1>观察未来的多种可能</h1><p>512 根已收盘 K 线 → 未来 24 根。独立采样保留每条走势，帮助你比较模型生成的不同情景。</p></header>
+<section id="status" role="status">正在读取已发布结果…</section>
+<section id="result" hidden><div class="facts"><article><small>交易对 / 周期</small><strong id="pair"></strong></article><article><small>最后一根历史 K 线开盘时间（北京时间）</small><strong id="last"></strong></article><article><small>结果生成时间（北京时间）</small><strong id="generated"></strong></article></div>
+<div class="chart-card"><div class="chart-heading"><h2>历史价格与预测路径</h2><button id="download">下载全部路径 CSV</button></div><p class="legend">黑色：最后 96 根历史收盘价 · 彩色：每条独立预测路径 · 竖线：预测起点</p><svg id="chart" viewBox="0 0 1100 420" role="img" aria-label="历史收盘价和多条未来预测路径"></svg><p id="range"></p><p id="stale" role="status"></p></div>
+<div class="table-card"><h2>未来 24 根 · 采样收盘价范围</h2><div class="table-scroll"><table><thead><tr><th>时间（北京时间）</th><th>样本最低</th><th>样本中位数</th><th>样本最高</th></tr></thead><tbody id="rows"></tbody></table></div></div></section>
+<footer>仅展示预先生成的结果，不自动更新。样本范围不是经过校准的置信区间，也不代表真实涨跌概率。预测未经交易效果验证，不构成买卖建议。<br>数据来源：<span id="source">尚未发布</span>；模型：NeoQuasar/Kronos-small。访问此页面不会连接你的交易账户。</footer></main></body></html>
