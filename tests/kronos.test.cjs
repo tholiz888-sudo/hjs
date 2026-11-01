@@ -5,7 +5,7 @@ test('Kronos free viewer serves page and reports absent real results without exp
   const server=http.createServer(handleKronos);await new Promise(r=>server.listen(0,'127.0.0.1',r));
   const base=`http://127.0.0.1:${server.address().port}`;
   try{
-    const page=await fetch(base+'/kronos/');assert.equal(page.status,200);assert.match(await page.text(),/未来 24 根/);assert.match(page.headers.get('content-security-policy'),/default-src 'self'/);
+    const page=await fetch(base+'/kronos/');assert.equal(page.status,200);const html=await page.text();assert.match(html,/未来 24 根/);assert.match(html,/actions\/workflows\/kronos-forecast\.yml/);assert.match(html,/Run workflow/);assert.match(page.headers.get('content-security-policy'),/default-src 'self'/);
     for(const file of ['app.js','style.css'])assert.equal((await fetch(base+'/kronos/'+file)).status,200);
     const result=await fetch(base+'/kronos/forecast.json');
     if(result.status===404)assert.match((await result.json()).error,/尚未生成真实预测/);
@@ -34,12 +34,5 @@ test('viewer draws each synthetic path, table and UTC CSV without publishing fix
   assert.match(nodes.get('#stale').textContent,/窗口已经过去/);
   nodes.get('#download').onclick();const lines=(await blob.text()).trim().split(/\r?\n/);assert.equal(lines.length,73);assert.match(lines[1],/^1,2026-.*Z,/);
   data.paths[0][0].close=null;await vm.runInContext('load()',context);assert.equal(nodes.get('#result').hidden,true);assert.match(nodes.get('#status').textContent,/无效数值/);
-  context.fetch=async url=>{assert.equal(url,'/kronos/config.json');return {ok:true,json:async()=>({spaceUrl:'https://test-kronos.hf.space'})};};
-  await vm.runInContext('load()',context);assert.equal(nodes.get('#space-frame').src,'https://test-kronos.hf.space');assert.equal(nodes.get('#online').hidden,false);assert.equal(nodes.get('#status').hidden,true);
-});
 
-test('online Space URL configuration only allows a direct HTTPS hf.space origin',()=>{
-  const {configuredSpaceUrl}=require('../kronos-render/handler.cjs');
-  assert.equal(configuredSpaceUrl('https://test-kronos.hf.space'),'https://test-kronos.hf.space');
-  for(const input of ['http://test.hf.space','https://evil.example','https://good.hf.space.evil.com','https://user:secret@good.hf.space','https://good.hf.space/?token=secret','https://good.hf.space/path','javascript:alert(1)','https://good.hf.space:8080'])assert.equal(configuredSpaceUrl(input),null);
 });

@@ -1,22 +1,25 @@
 # Kronos 免费 Render 展示页
 
-本功能接入现有 Node 24 网站，支持连接免费 Hugging Face Space 在线生成，也保留离线展示方式。地址为 `/kronos/`，首页顶栏有入口。Render 只提供静态结果，**无需安装 Python、PyTorch 或模型，不增加付费服务**。原 `render.yaml` 保持不变。结果不会实时更新；缺少真实结果时明确显示尚未生成。
+本功能接入现有 Node 24 网站，使用 GitHub Actions 在线生成，也保留本地生成方式。地址为 `/kronos/`，首页顶栏有入口。Render 只提供静态结果，**无需安装 Python、PyTorch 或模型，不增加付费服务**。原 `render.yaml` 保持不变。结果不会实时更新；缺少真实结果时明确显示尚未生成。
 
 
-## 免费在线方案（用户当前选择）
+## 当前免费在线方案：GitHub Actions
 
-模型在 Hugging Face 免费 CPU Basic Space 中运行，Render 保持现有 Node 免费服务。免费服务可能休眠、排队或受到平台资源限制；不保证永久免费额度或持续可用。
+现有 hjs 仓库已通过 GitHub 仓库页面确认是 Public。GitHub 标准 runner 用于公开仓库的规则见官方 GitHub Actions 计费文档；此任务强制公开仓库才运行，固定 ubuntu-latest 标准 runner，最长 20 分钟，不使用付费大型 runner，不设置定时任务。
 
-1. 注册 https://huggingface.co/join 并验证邮箱。
-2. 在 https://huggingface.co/new-space 新建公开 Gradio Space，硬件选择 CPU Basic 免费选项。
-3. 下载本目录 `downloads/kronos-space.zip`，解压后把里面的全部文件和 `model/` 文件夹上传到新 Space 的根目录。不是把 ZIP 文件本身上传。完整代码在 `hf-space/`。
-4. Space 构建完成后，在 App 运行 BTCUSDT / 1h / 2 条路径，检查真实预测是否成功；当前仅本地界面与适配器测试通过，模型权重下载和真实在线推理尚未验证。
-5. 在 Render 服务 hjs-4 的 Environment 添加 `KRONOS_SPACE_URL`，值为该 Space 的 HTTPS 直接应用地址，例如 `https://用户名-space名称.hf.space`（不是 huggingface.co/spaces/... 仓库地址），保存并重新部署。
-6. 打开 https://hjs-4.onrender.com/kronos/ ，页面会嵌入在线预测界面，支持选择交易对、周期和路径数，以及下载 CSV / PNG / JSON。
+**不需要 Hugging Face 账号、Space 或 PRO。** 之前的 HF Spaces CPU 免费方案已被用户实际创建页面否定，`hf-space/` 仅保留为历史备选，不是本方案的依赖。
 
-Space 地址不含密钥。无需给本站或 Space 提供交易所密钥。Render 不安装 PyTorch，不创建任何付费实例。现有 Render 服务需要额外配置一个非秘密网址，云环境设置保存不会自动修改 Render 环境变量。
+1. 打开 https://github.com/tholiz888-sudo/hjs/actions/workflows/kronos-forecast.yml ，使用拥有仓库权限的 GitHub 账号登录。
+2. 如 GitHub 提示启用 Actions，先启用。点击 **Run workflow**，选择 **main** 分支、交易对、周期和路径数，再点击运行。
+3. 等待任务成功；第一次添加此工作流到 main 时会自动生成默认 BTCUSDT / 1h / 3 路径。
+4. 任务先获取 512 根已收盘 Binance K 线并运行 Kronos-small，验证 24 步输出和路径差异；成功后只提交 `results/forecast.json` 到 Render 实际绑定的 **codex/kronos-render-free** 分支。
+5. Render hjs-4 自动部署完成后打开 https://hjs-4.onrender.com/kronos/ 。如果自动部署未开启，在已有服务使用 Manual Deploy → Deploy latest commit。
 
-部署包保留原 Kronos MIT 许可证。只有在实际 Space 中完成模型加载、真实行情请求和 24 根预测后才能称为上线成功。
+工作流通过 `contents: write` 使用 GitHub 自带的临时 GITHUB_TOKEN 发布结果，不需要把密钥放入 Render。若仓库规则禁止 bot 推送，任务会报错，需要仓库维护者调整权限后重新运行。生成失败不会覆盖旧结果。
+
+只有工作流文件变更推送到 main 才会自动运行；预测结果提交不会循环触发任务。所有后续生成均可手动触发。普通访客只查看结果，维护者负责运行，不开放匿名消耗计算的接口。账户或组织的 Actions 权限限制、平台可用性仍可能阻止运行；任务尚未成功前不能宣称预测已经生成。
+
+行情使用 Binance 官方公开行情专用域名 `data-api.binance.vision`，失败时尝试 `api.binance.com`。不会生成模拟行情替代真实数据。只把验证后的 JSON 保留在 Git 中，网页可导出 CSV；不上传 Actions Artifact、不启用 Actions 缓存，避免额外存储计费。
 
 ## 在本地或云机器生成真实结果
 

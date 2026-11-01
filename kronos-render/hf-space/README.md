@@ -11,7 +11,9 @@ pinned: false
 license: mit
 ---
 
-# Kronos-small 免费在线预测
+# Kronos-small 在线预测（历史备选）
+
+注意：用户当前的 HF 创建页面显示 Gradio/Docker 要求付费。此目录不再作为免费方案；当前免费路径为 GitHub Actions。保留此代码仅供有可用计算资源的账号部署。
 
 使用免费的 CPU Basic 硬件，在网页选币种、周期并点击生成，输入 512 根已收盘 K 线，采样 2–5 条未来 24 根走势。无需交易密钥，不连接账户。
 

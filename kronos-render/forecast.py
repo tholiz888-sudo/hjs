@@ -39,18 +39,8 @@ def main():
         frame['timestamps'] = pd.to_datetime(frame['timestamps'], utc=True).dt.tz_localize(None)
         source = str(a.csv)
     else:
-        response = requests.get('https://api.binance.com/api/v3/klines', params={
-            'symbol': a.symbol.upper(), 'interval': a.interval, 'limit': 513}, timeout=30)
-        response.raise_for_status()
-        rows = response.json()
-        if not isinstance(rows, list):
-            raise ValueError(f'Unexpected Binance response: {rows}')
-        now_ms = pd.Timestamp.now(tz='UTC').timestamp() * 1000
-        rows = [r for r in rows if r[6] < now_ms]
-        frame = pd.DataFrame([{'timestamps': pd.to_datetime(r[0], unit='ms'),
-            'open': float(r[1]), 'high': float(r[2]), 'low': float(r[3]),
-            'close': float(r[4]), 'volume': float(r[5]), 'amount': float(r[7])} for r in rows])
-        source = 'Binance spot API, closed candles only'
+        from market import fetch_candles
+        frame, source = fetch_candles(a.symbol.upper(), a.interval)
     frame = frame.tail(512).reset_index(drop=True)
     cols = ['open', 'high', 'low', 'close', 'volume', 'amount']
     if len(frame) != 512 or not np.isfinite(frame[cols].to_numpy()).all():
@@ -99,6 +89,8 @@ def main():
         'model_revision': '901c26c1332695a2a8f243eb2f37243a37bea320',
         'tokenizer_revision': '0e0117387f39004a9016484a186a908917e22426',
         'time_basis': 'UTC'}
+    if os.environ.get('GITHUB_RUN_ID') and os.environ.get('GITHUB_REPOSITORY'):
+        metadata['run_url'] = f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
     (a.output / 'metadata.json').write_text(json.dumps(metadata, indent=2))
     payload = {'metadata': metadata,
         'history': json.loads(frame.to_json(orient='records', date_format='iso')),
