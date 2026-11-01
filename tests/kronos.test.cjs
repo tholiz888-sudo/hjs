@@ -24,7 +24,7 @@ test('viewer draws each synthetic path, table and UTC CSV without publishing fix
   class Element {constructor(tag){this.tag=tag;this.children=[];this.attrs={};this.hidden=true;}setAttribute(k,v){this.attrs[k]=v;}append(...items){this.children.push(...items);}click(){this.clicked=true;}}
   const nodes=new Map(),document={querySelector:key=>{if(!nodes.has(key))nodes.set(key,new Element(key));return nodes.get(key);},createElementNS:(_,tag)=>new Element(tag),createElement:tag=>new Element(tag)};
   let blob;
-  const context={document,Intl,Date,Blob,URL:{createObjectURL:b=>{blob=b;return 'blob:test';},revokeObjectURL(){}},setTimeout:fn=>fn(),fetch:async()=>({ok:true,status:200,json:async()=>data})};
+  const context={document,Intl,Date,Blob,URL:class extends URL{static createObjectURL(b){blob=b;return 'blob:test';}static revokeObjectURL(){}},setTimeout:fn=>fn(),fetch:async()=>({ok:true,status:200,json:async()=>data})};
   vm.createContext(context);
   const source=fs.readFileSync(path.join(__dirname,'../kronos-render/app.js'),'utf8').replace(/load\(\);\s*$/,'globalThis.finished=load();');
   vm.runInContext(source,context);await context.finished;
@@ -34,4 +34,12 @@ test('viewer draws each synthetic path, table and UTC CSV without publishing fix
   assert.match(nodes.get('#stale').textContent,/窗口已经过去/);
   nodes.get('#download').onclick();const lines=(await blob.text()).trim().split(/\r?\n/);assert.equal(lines.length,73);assert.match(lines[1],/^1,2026-.*Z,/);
   data.paths[0][0].close=null;await vm.runInContext('load()',context);assert.equal(nodes.get('#result').hidden,true);assert.match(nodes.get('#status').textContent,/无效数值/);
+  context.fetch=async url=>{assert.equal(url,'/kronos/config.json');return {ok:true,json:async()=>({spaceUrl:'https://test-kronos.hf.space'})};};
+  await vm.runInContext('load()',context);assert.equal(nodes.get('#space-frame').src,'https://test-kronos.hf.space');assert.equal(nodes.get('#online').hidden,false);assert.equal(nodes.get('#status').hidden,true);
+});
+
+test('online Space URL configuration only allows a direct HTTPS hf.space origin',()=>{
+  const {configuredSpaceUrl}=require('../kronos-render/handler.cjs');
+  assert.equal(configuredSpaceUrl('https://test-kronos.hf.space'),'https://test-kronos.hf.space');
+  for(const input of ['http://test.hf.space','https://evil.example','https://good.hf.space.evil.com','https://user:secret@good.hf.space','https://good.hf.space/?token=secret','https://good.hf.space/path','javascript:alert(1)','https://good.hf.space:8080'])assert.equal(configuredSpaceUrl(input),null);
 });

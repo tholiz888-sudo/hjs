@@ -1,6 +1,22 @@
 # Kronos 免费 Render 展示页
 
-本功能接入现有 Node 24 网站，地址为 `/kronos/`，首页顶栏有入口。Render 只提供静态结果，**无需安装 Python、PyTorch 或模型，不增加付费服务**。原 `render.yaml` 保持不变。结果不会实时更新；缺少真实结果时明确显示尚未生成。
+本功能接入现有 Node 24 网站，支持连接免费 Hugging Face Space 在线生成，也保留离线展示方式。地址为 `/kronos/`，首页顶栏有入口。Render 只提供静态结果，**无需安装 Python、PyTorch 或模型，不增加付费服务**。原 `render.yaml` 保持不变。结果不会实时更新；缺少真实结果时明确显示尚未生成。
+
+
+## 免费在线方案（用户当前选择）
+
+模型在 Hugging Face 免费 CPU Basic Space 中运行，Render 保持现有 Node 免费服务。免费服务可能休眠、排队或受到平台资源限制；不保证永久免费额度或持续可用。
+
+1. 注册 https://huggingface.co/join 并验证邮箱。
+2. 在 https://huggingface.co/new-space 新建公开 Gradio Space，硬件选择 CPU Basic 免费选项。
+3. 下载本目录 `downloads/kronos-space.zip`，解压后把里面的全部文件和 `model/` 文件夹上传到新 Space 的根目录。不是把 ZIP 文件本身上传。完整代码在 `hf-space/`。
+4. Space 构建完成后，在 App 运行 BTCUSDT / 1h / 2 条路径，检查真实预测是否成功；当前仅本地界面与适配器测试通过，模型权重下载和真实在线推理尚未验证。
+5. 在 Render 服务 hjs-4 的 Environment 添加 `KRONOS_SPACE_URL`，值为该 Space 的 HTTPS 直接应用地址，例如 `https://用户名-space名称.hf.space`（不是 huggingface.co/spaces/... 仓库地址），保存并重新部署。
+6. 打开 https://hjs-4.onrender.com/kronos/ ，页面会嵌入在线预测界面，支持选择交易对、周期和路径数，以及下载 CSV / PNG / JSON。
+
+Space 地址不含密钥。无需给本站或 Space 提供交易所密钥。Render 不安装 PyTorch，不创建任何付费实例。现有 Render 服务需要额外配置一个非秘密网址，云环境设置保存不会自动修改 Render 环境变量。
+
+部署包保留原 Kronos MIT 许可证。只有在实际 Space 中完成模型加载、真实行情请求和 24 根预测后才能称为上线成功。
 
 ## 在本地或云机器生成真实结果
 

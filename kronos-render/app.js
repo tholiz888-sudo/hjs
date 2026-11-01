@@ -24,8 +24,12 @@ function csv(data){
   const lines=[columns.join(',')];data.paths.forEach((p,i)=>p.forEach(row=>lines.push([i+1,row.timestamps.replace(/Z?$/,'Z'),...columns.slice(2).map(c=>row[c])].join(','))));
   const url=URL.createObjectURL(new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='kronos-paths.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+async function connectOnline(){
+  try{const response=await fetch('/kronos/config.json',{cache:'no-store'});if(!response.ok)return false;const config=await response.json();if(!config.spaceUrl)return false;const url=new URL(config.spaceUrl);if(url.protocol!=='https:'||url.username||url.password||! /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.hf\.space$/.test(url.hostname))return false;$('#space-frame').src=url.origin;$('#space-link').href=url.origin;$('#online').hidden=false;$('#status').hidden=true;return true;}catch{return false;}
+}
 async function load(){
-  try{const response=await fetch('/kronos/forecast.json',{cache:'no-store'});if(response.status===404){$('#status').textContent='尚未生成真实预测。此页面已部署，等待本地完成模型推理并发布结果；当前没有可展示的预测路径。';return;}if(!response.ok)throw Error('读取结果失败，请稍后重试。');const data=await response.json();valid(data);const m=data.metadata;
+  if(await connectOnline())return;
+  try{const response=await fetch('/kronos/forecast.json',{cache:'no-store'});if(response.status===404){$('#status').textContent='尚未生成真实预测。在线预测服务尚未连接，当前也没有已发布结果；连接免费推理服务后，即可在此选择币种并生成。';return;}if(!response.ok)throw Error('读取结果失败，请稍后重试。');const data=await response.json();valid(data);const m=data.metadata;
     $('#pair').textContent=`${m.symbol} · ${m.interval} · ${data.paths.length} 条路径`;$('#last').textContent=fmtTime(m.last_closed_open_time_utc.replace(' ','T'));$('#generated').textContent=fmtTime(m.generated_at_utc);
     $('#status').textContent='已加载预先生成的结果。页面不会自动生成或刷新行情。';$('#result').hidden=false;
     draw(data);$('#range').textContent=`预测时间：${fmtTime(data.paths[0][0].timestamps)} 至 ${fmtTime(data.paths[0].at(-1).timestamps)}（北京时间，K 线开盘时间）`;
