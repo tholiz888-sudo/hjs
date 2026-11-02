@@ -8,16 +8,65 @@ function valid(data){
   for(const series of [data.history,...data.paths]){if(series!==data.history&&series.length!==24)throw Error('预测路径长度无效。');for(const row of series){if(!/^\d{4}-\d\d-\d\dT[0-9:.]+Z?$/.test(row.timestamps)||!Number.isFinite(Date.parse(row.timestamps)))throw Error('时间无效。');for(const key of ['open','high','low','close','volume','amount'])if(!Number.isFinite(row[key]))throw Error('结果包含无效数值。');}}
   for(const series of data.paths)if(series.some((r,i)=>r.timestamps!==data.paths[0][i].timestamps))throw Error('各路径时间不一致。');
 }
+const pathColors=['#347fbd','#d78c2e','#9264be','#219b7d','#cf667c'];
+const median=values=>{const a=[...values].sort((x,y)=>x-y),i=a.length>>1;return a.length%2?a[i]:(a[i-1]+a[i])/2;};
+const percent=v=>(v>0?'+':'')+v.toFixed(2)+'%';
 function draw(data){
-  const svg=$('#chart'),history=data.history.slice(-96),future=data.paths[0],all=[history,...data.paths].flat(),values=all.map(r=>r.close),lo=Math.min(...values),hi=Math.max(...values),pad=(hi-lo)*.08||1,min=lo-pad,max=hi+pad,w=1100,h=420,L=90,R=25,T=25,B=50,n=history.length+24;
-  const x=i=>L+i/(n-1)*(w-L-R),y=v=>T+(max-v)/(max-min)*(h-T-B);
-  for(let i=0;i<5;i++){const v=min+(max-min)*i/4,py=y(v);svg.append(element('line',{x1:L,y1:py,x2:w-R,y2:py,stroke:'#e6eee8'}),element('text',{x:L-12,y:py+4,'text-anchor':'end'},number(v)));}
-  const colors=['#347fbd','#e49331','#9264be','#219b7d','#d56378'];
-  function line(rows,start,color,width=2){svg.append(element('polyline',{points:rows.map((r,i)=>`${x(start+i)},${y(r.close)}`).join(' '),fill:'none',stroke:color,'stroke-width':width,'stroke-opacity':'.8'}));}
-  line(history,0,'#17382d',2.5);
-  data.paths.forEach((p,i)=>line([history.at(-1),...p],history.length-1,colors[i%colors.length]));
-  svg.append(element('line',{x1:x(history.length-1),x2:x(history.length-1),y1:T,y2:h-B,stroke:'#708b7d','stroke-dasharray':'5 5'}));
-  for(const [index,row]of [[0,history[0]],[history.length-1,history.at(-1)],[n-1,future.at(-1)]]){svg.append(element('text',{x:x(index),y:h-15,'text-anchor':index===0?'start':index===n-1?'end':'middle'},fmtTime(row.timestamps)));}
+  const svg=$('#chart'),base=data.history.at(-1).close;
+  if(base<=0)throw Error('历史基准价格无效。');
+  const summaries=data.paths[0].map((row,i)=>{const values=data.paths.map(p=>p[i].close);return {timestamps:row.timestamps,min:Math.min(...values),max:Math.max(...values),mid:median(values)};});
+  const terminal=summaries.at(-1),change=value=>(value/base-1)*100;
+  $('#base-price').textContent=number(base);$('#end-median').textContent=number(terminal.mid);
+  $('#median-change').textContent=percent(change(terminal.mid));$('#median-change').className=change(terminal.mid)>=0?'positive':'negative';
+  $('#end-range').textContent=percent(change(terminal.min))+' 至 '+percent(change(terminal.max));
+  let view='future',selected=null;
+  const controls=$('#path-controls');controls.replaceChildren();
+  const buttons=[];
+  function select(index){selected=index;buttons.forEach((button,i)=>button.setAttribute('aria-pressed',String((i===0&&selected===null)||i===selected+1&&selected!==null)));render();}
+  for(let i=-1;i<data.paths.length;i++){
+    const button=document.createElement('button');button.className='path-button';button.type='button';button.setAttribute('aria-pressed',String(i===-1));
+    if(i>=0){const dot=document.createElement('span');dot.className='path-swatch';dot.style.backgroundColor=pathColors[i%pathColors.length];button.append(dot);}
+    button.append(document.createTextNode(i===-1?'全部路径':`路径 ${i+1}`));button.onclick=()=>select(i===-1||selected===i?null:i);controls.append(button);buttons.push(button);
+  }
+  const comparison=$('#path-comparison');comparison.replaceChildren();
+  const changes=data.paths.map(p=>change(p.at(-1).close)),limit=Math.max(...changes.map(Math.abs),.01);
+  changes.forEach((value,i)=>{
+    const row=document.createElement('div');row.className='comparison-row';
+    const name=document.createElement('button');name.type='button';name.className='comparison-name';name.textContent=`路径 ${i+1}`;name.onclick=()=>select(selected===i?null:i);
+    const track=document.createElement('div');track.className='comparison-track';const zero=document.createElement('span');zero.className='comparison-zero';const bar=document.createElement('span');bar.className='comparison-bar';const width=Math.abs(value)/limit*50;bar.style.width=width+'%';bar.style.left=(value<0?50-width:50)+'%';bar.style.backgroundColor=pathColors[i%pathColors.length];track.append(zero,bar);
+    const label=document.createElement('span');label.className='comparison-value '+(value>=0?'positive':'negative');label.textContent=percent(value);row.append(name,track,label);comparison.append(row);
+  });
+  $('#focus-future').onclick=()=>{view='future';render();};$('#focus-history').onclick=()=>{view='history';render();};
+  function render(){
+    svg.replaceChildren();$('#focus-future').setAttribute('aria-pressed',String(view==='future'));$('#focus-history').setAttribute('aria-pressed',String(view==='history'));
+    const history=data.history.slice(view==='future'?-1:-96),n=history.length+24,values=[...history.map(r=>r.close),...data.paths.flatMap(p=>p.map(r=>r.close))];
+    const lo=Math.min(...values),hi=Math.max(...values),pad=(hi-lo)*.12||1,min=lo-pad,max=hi+pad,w=1100,h=420,L=90,R=25,T=32,B=50;
+    const x=i=>L+i/(n-1)*(w-L-R),y=v=>T+(max-v)/(max-min)*(h-T-B),start=history.length-1;
+    for(let i=0;i<5;i++){const v=min+(max-min)*i/4,py=y(v);svg.append(element('line',{x1:L,y1:py,x2:w-R,y2:py,stroke:'#e6eee8'}),element('text',{x:L-12,y:py+4,'text-anchor':'end'},number(v)));}
+    const upper=[{max:base},...summaries],lower=[{min:base},...summaries];
+    const points=[...upper.map((r,i)=>`${x(start+i)},${y(r.max)}`),...lower.map((_,j)=>{const i=lower.length-1-j;return `${x(start+i)},${y(lower[i].min)}`;})].join(' ');
+    const band=element('polygon',{points,fill:'#8fbda3','fill-opacity':'.27','data-series':'sample-range'});band.append(element('title',{},'各时点采样最低至最高收盘价范围，不是置信区间'));svg.append(band);
+    function line(rows,offset,color,width=2,opacity=.85,dash){const e=element('polyline',{points:rows.map((r,i)=>`${x(offset+i)},${y(r.close)}`).join(' '),fill:'none',stroke:color,'stroke-width':width,'stroke-opacity':opacity,'stroke-linejoin':'round','stroke-linecap':'round'});if(dash)e.setAttribute('stroke-dasharray',dash);svg.append(e);return e;}
+    line(history,0,'#17382d',2.5);
+    data.paths.forEach((p,i)=>{const e=line([history.at(-1),...p],start,pathColors[i%pathColors.length],selected===i?3.7:2,selected!==null&&selected!==i?.16:.85);e.append(element('title',{},`路径 ${i+1} · 末根涨跌幅 ${percent(changes[i])}`));});
+    line([{close:base},...summaries.map(r=>({close:r.mid}))],start,'#235a42',2.7,.95,'6 5');
+    svg.append(element('line',{x1:L,x2:w-R,y1:y(base),y2:y(base),stroke:'#7a9585','stroke-dasharray':'3 5','stroke-opacity':'.55'}));
+    if(view==='history')svg.append(element('line',{x1:x(start),x2:x(start),y1:T,y2:h-B,stroke:'#708b7d','stroke-dasharray':'5 5'}));
+    for(const [index,row]of [[0,history[0]],[n-1,data.paths[0].at(-1)]])svg.append(element('text',{x:x(index),y:h-15,'text-anchor':index===0?'start':'end'},fmtTime(row.timestamps)));
+    svg.append(element('text',{x:x(start)+8,y:20},'预测起点'));
+    const cursor=element('line',{x1:0,x2:0,y1:T,y2:h-B,stroke:'#557f67','stroke-dasharray':'3 3',visibility:'hidden'}),dot=element('circle',{cx:0,cy:0,r:5,fill:'#235a42',stroke:'white','stroke-width':2,visibility:'hidden'});svg.append(cursor,dot);
+    let active=history.length-1;
+    function inspect(index){active=Math.max(0,Math.min(n-1,index));cursor.setAttribute('x1',x(active));cursor.setAttribute('x2',x(active));cursor.setAttribute('visibility','visible');
+      if(active<history.length){const row=history[active];dot.setAttribute('cx',x(active));dot.setAttribute('cy',y(row.close));$('#inspect').textContent=`${fmtTime(row.timestamps)} · 历史收盘价 ${number(row.close)}`;}
+      else{const i=active-history.length,r=summaries[i];dot.setAttribute('cx',x(active));dot.setAttribute('cy',y(r.mid));$('#inspect').textContent=`第 ${i+1} 根 · ${fmtTime(r.timestamps)} · 样本范围 ${number(r.min)}–${number(r.max)} · 中位数 ${number(r.mid)} · `+data.paths.map((p,j)=>`路径 ${j+1}：${number(p[i].close)}`).join(' / ');}
+      dot.setAttribute('visibility','visible');
+    }
+    $('#inspect').textContent='移入图表查看数值，也可聚焦图表后使用左右方向键。';
+    svg.onpointermove=event=>{const rect=svg.getBoundingClientRect();inspect(Math.round(((event.clientX-rect.left)/rect.width*w-L)/(w-L-R)*(n-1)));};
+    svg.onpointerleave=()=>{cursor.setAttribute('visibility','hidden');dot.setAttribute('visibility','hidden');};
+    svg.onkeydown=event=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){event.preventDefault();inspect(event.key==='Home'?0:event.key==='End'?n-1:active+(event.key==='ArrowLeft'?-1:1));}};
+  }
+  render();
 }
 function csv(data){
   const columns=['path','timestamps_utc','open','high','low','close','volume','amount'];
@@ -30,6 +79,7 @@ async function load(){
     $('#status').textContent='已加载最近一次成功任务的结果。需要更新时，请运行上方的 GitHub 预测任务。';$('#result').hidden=false;
     draw(data);$('#range').textContent=`预测时间：${fmtTime(data.paths[0][0].timestamps)} 至 ${fmtTime(data.paths[0].at(-1).timestamps)}（北京时间，K 线开盘时间）`;
     if(Date.now()>Date.parse(data.paths[0].at(-1).timestamps.replace(/Z?$/,'Z')))$('#stale').textContent='该预测窗口已经过去，请按历史时点推演查看；需要新结果时请运行新的 GitHub 预测任务。';
+    $('#rows').replaceChildren();
     data.paths[0].forEach((r,i)=>{const values=data.paths.map(p=>p[i].close).sort((a,b)=>a-b),k=values.length>>1,median=values.length%2?values[k]:(values[k-1]+values[k])/2,tr=document.createElement('tr');for(const value of [fmtTime(r.timestamps),number(values[0]),number(median),number(values.at(-1))]){const td=document.createElement('td');td.textContent=value;tr.append(td);}$('#rows').append(tr);});
     $('#download').onclick=()=>csv(data);$('#source').textContent=m.source;
   }catch(error){$('#result').hidden=true;$('#status').textContent=error.message||'无法加载结果。';}

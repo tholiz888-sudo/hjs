@@ -21,16 +21,27 @@ test('viewer draws each synthetic path, table and UTC CSV without publishing fix
   const vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
   const start=Date.UTC(2026,0,1),row=(i,offset=0)=>({timestamps:new Date(start+i*3600000).toISOString(),open:100,high:102,low:99,close:100+offset,volume:10,amount:1000});
   const data={metadata:{context:512,horizon:24,symbol:'TESTUSDT',interval:'1h',last_closed_open_time_utc:row(511).timestamps,generated_at_utc:row(512).timestamps,source:'SYNTHETIC TEST ONLY'},history:Array.from({length:512},(_,i)=>row(i)),paths:[0,1,2].map(j=>Array.from({length:24},(_,i)=>row(512+i,j)))};
-  class Element {constructor(tag){this.tag=tag;this.children=[];this.attrs={};this.hidden=true;}setAttribute(k,v){this.attrs[k]=v;}append(...items){this.children.push(...items);}click(){this.clicked=true;}}
-  const nodes=new Map(),document={querySelector:key=>{if(!nodes.has(key))nodes.set(key,new Element(key));return nodes.get(key);},createElementNS:(_,tag)=>new Element(tag),createElement:tag=>new Element(tag)};
+  data.paths[0][23].close=98;data.paths[0][23].low=97;
+  class Element {constructor(tag){this.tag=tag;this.children=[];this.attrs={};this.style={};this.hidden=true;}setAttribute(k,v){this.attrs[k]=v;}append(...items){this.children.push(...items);}replaceChildren(...items){this.children=[...items];}getBoundingClientRect(){return {left:0,width:1100};}click(){this.clicked=true;}}
+  const nodes=new Map(),document={querySelector:key=>{if(!nodes.has(key))nodes.set(key,new Element(key));return nodes.get(key);},createElementNS:(_,tag)=>new Element(tag),createElement:tag=>new Element(tag),createTextNode:text=>({textContent:text})};
   let blob;
   const context={document,Intl,Date,Blob,URL:class extends URL{static createObjectURL(b){blob=b;return 'blob:test';}static revokeObjectURL(){}},setTimeout:fn=>fn(),fetch:async()=>({ok:true,status:200,json:async()=>data})};
   vm.createContext(context);
   const source=fs.readFileSync(path.join(__dirname,'../kronos-render/app.js'),'utf8').replace(/load\(\);\s*$/,'globalThis.finished=load();');
   vm.runInContext(source,context);await context.finished;
   assert.equal(nodes.get('#result').hidden,false);
-  assert.equal(nodes.get('#chart').children.filter(e=>e.tag==='polyline').length,4);
+  assert.equal(nodes.get('#chart').children.filter(e=>e.tag==='polyline').length,5);
   assert.equal(nodes.get('#rows').children.length,24);
+  assert.equal(nodes.get('#chart').children.filter(e=>e.tag==='polygon').length,1);
+  assert.equal(nodes.get('#end-median').textContent,'101');
+  assert.equal(nodes.get('#median-change').textContent,'+1.00%');
+  assert.equal(nodes.get('#end-range').textContent,'-2.00% 至 +2.00%');
+  assert.equal(nodes.get('#path-comparison').children[0].children[1].children[1].style.left,'0%');
+  assert.equal(nodes.get('#path-comparison').children.length,3);
+  const chart=nodes.get('#chart');chart.onkeydown({key:'End',preventDefault(){}});assert.match(nodes.get('#inspect').textContent,/第 24 根/);assert.match(nodes.get('#inspect').textContent,/中位数 101/);
+  nodes.get('#path-controls').children[1].onclick();assert.equal(chart.children.filter(e=>e.tag==='polyline')[1].attrs['stroke-width'],3.7);assert.equal(chart.children.filter(e=>e.tag==='polyline')[2].attrs['stroke-opacity'],.16);
+  nodes.get('#focus-history').onclick();assert.equal(nodes.get('#focus-history').attrs['aria-pressed'],'true');chart.onpointermove({clientX:90});assert.match(nodes.get('#inspect').textContent,/历史收盘价/);
+  nodes.get('#focus-future').onclick();assert.equal(nodes.get('#focus-future').attrs['aria-pressed'],'true');
   assert.match(nodes.get('#stale').textContent,/窗口已经过去/);
   nodes.get('#download').onclick();const lines=(await blob.text()).trim().split(/\r?\n/);assert.equal(lines.length,73);assert.match(lines[1],/^1,2026-.*Z,/);
   data.paths[0][0].close=null;await vm.runInContext('load()',context);assert.equal(nodes.get('#result').hidden,true);assert.match(nodes.get('#status').textContent,/无效数值/);
