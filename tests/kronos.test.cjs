@@ -24,8 +24,8 @@ test('viewer draws each synthetic path, table and UTC CSV without publishing fix
   data.paths[0][23].close=98;data.paths[0][23].low=97;
   class Element {constructor(tag){this.tag=tag;this.children=[];this.attrs={};this.style={};this.hidden=true;}setAttribute(k,v){this.attrs[k]=v;}append(...items){this.children.push(...items);}replaceChildren(...items){this.children=[...items];}getBoundingClientRect(){return {left:0,width:1100};}click(){this.clicked=true;}}
   const nodes=new Map(),document={querySelector:key=>{if(!nodes.has(key))nodes.set(key,new Element(key));return nodes.get(key);},createElementNS:(_,tag)=>new Element(tag),createElement:tag=>new Element(tag),createTextNode:text=>({textContent:text})};
-  let blob;
-  const context={document,Intl,Date,Blob,URL:class extends URL{static createObjectURL(b){blob=b;return 'blob:test';}static revokeObjectURL(){}},setTimeout:fn=>fn(),fetch:async()=>({ok:true,status:200,json:async()=>data})};
+  let blob,settings={},history=[];
+  const context={document,Intl,Date,Blob,URL:class extends URL{static createObjectURL(b){blob=b;return 'blob:test';}static revokeObjectURL(){}},setTimeout:fn=>fn(),fetch:async url=>({ok:true,status:200,json:async()=>url.endsWith('/settings.json')?settings:url.endsWith('/history.json')?{history}:data})};
   vm.createContext(context);
   const source=fs.readFileSync(path.join(__dirname,'../kronos-render/app.js'),'utf8').replace(/load\(\);\s*$/,'globalThis.finished=load();');
   vm.runInContext(source,context);await context.finished;
@@ -44,6 +44,10 @@ test('viewer draws each synthetic path, table and UTC CSV without publishing fix
   nodes.get('#focus-future').onclick();assert.equal(nodes.get('#focus-future').attrs['aria-pressed'],'true');
   assert.match(nodes.get('#stale').textContent,/窗口已经过去/);
   nodes.get('#download').onclick();const lines=(await blob.text()).trim().split(/\r?\n/);assert.equal(lines.length,73);assert.match(lines[1],/^1,2026-.*Z,/);
+  settings={...require('../kronos-render/store.cjs').DEFAULTS,title:'自定义预测页',description:'测试说明',defaultView:'history',showBand:false,showMedian:false,showComparison:false,showTable:false};
+  history=[{id:'a'.repeat(24),generated_at_utc:data.metadata.generated_at_utc,symbol:'TESTUSDT',interval:'1h',paths:3,current:true},{id:'b'.repeat(24),generated_at_utc:data.metadata.generated_at_utc,symbol:'TESTUSDT',interval:'1h',paths:3,current:false}];
+  await vm.runInContext('load()',context);assert.equal(nodes.get('#page-title').textContent,'自定义预测页');assert.equal(nodes.get('#history-toolbar').hidden,false);assert.equal(nodes.get('#history-select').children.length,2);assert.equal(chart.children.filter(e=>e.tag==='polygon').length,0);assert.equal(chart.children.filter(e=>e.tag==='polyline').length,4);assert.equal(nodes.get('#comparison-section').hidden,true);assert.equal(nodes.get('#table-section').hidden,true);assert.equal(nodes.get('#focus-history').attrs['aria-pressed'],'true');assert.equal(nodes.get('#rows').children.length,24);
+  nodes.get('#history-select').value='b'.repeat(24);await nodes.get('#history-select').onchange();assert.equal(nodes.get('#rows').children.length,24);
   data.paths[0][0].close=null;await vm.runInContext('load()',context);assert.equal(nodes.get('#result').hidden,true);assert.match(nodes.get('#status').textContent,/无效数值/);
 
 });

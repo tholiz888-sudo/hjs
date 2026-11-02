@@ -11,15 +11,18 @@ function valid(data){
 const pathColors=['#347fbd','#d78c2e','#9264be','#219b7d','#cf667c'];
 const median=values=>{const a=[...values].sort((x,y)=>x-y),i=a.length>>1;return a.length%2?a[i]:(a[i-1]+a[i])/2;};
 const percent=v=>(v>0?'+':'')+v.toFixed(2)+'%';
+let displaySettings={defaultView:'future',showBand:true,showMedian:true,showComparison:true,showTable:true};
 function draw(data){
   const svg=$('#chart'),base=data.history.at(-1).close;
+  $('#chart-legend').textContent=[displaySettings.showBand?'浅绿色区域：样本最低至最高收盘价':null,displaySettings.showMedian?'深色虚线：逐根样本中位数':null,'彩色线：独立采样路径'].filter(Boolean).join(' · ');
   if(base<=0)throw Error('历史基准价格无效。');
   const summaries=data.paths[0].map((row,i)=>{const values=data.paths.map(p=>p[i].close);return {timestamps:row.timestamps,min:Math.min(...values),max:Math.max(...values),mid:median(values)};});
   const terminal=summaries.at(-1),change=value=>(value/base-1)*100;
   $('#base-price').textContent=number(base);$('#end-median').textContent=number(terminal.mid);
   $('#median-change').textContent=percent(change(terminal.mid));$('#median-change').className=change(terminal.mid)>=0?'positive':'negative';
   $('#end-range').textContent=percent(change(terminal.min))+' 至 '+percent(change(terminal.max));
-  let view='future',selected=null;
+  let view=displaySettings.defaultView==='history'?'history':'future',selected=null;
+  $('#comparison-section').hidden=!displaySettings.showComparison;$('#table-section').hidden=!displaySettings.showTable;
   const controls=$('#path-controls');controls.replaceChildren();
   const buttons=[];
   function select(index){selected=index;buttons.forEach((button,i)=>button.setAttribute('aria-pressed',String((i===0&&selected===null)||i===selected+1&&selected!==null)));render();}
@@ -45,11 +48,11 @@ function draw(data){
     for(let i=0;i<5;i++){const v=min+(max-min)*i/4,py=y(v);svg.append(element('line',{x1:L,y1:py,x2:w-R,y2:py,stroke:'#e6eee8'}),element('text',{x:L-12,y:py+4,'text-anchor':'end'},number(v)));}
     const upper=[{max:base},...summaries],lower=[{min:base},...summaries];
     const points=[...upper.map((r,i)=>`${x(start+i)},${y(r.max)}`),...lower.map((_,j)=>{const i=lower.length-1-j;return `${x(start+i)},${y(lower[i].min)}`;})].join(' ');
-    const band=element('polygon',{points,fill:'#8fbda3','fill-opacity':'.27','data-series':'sample-range'});band.append(element('title',{},'各时点采样最低至最高收盘价范围，不是置信区间'));svg.append(band);
+    const band=element('polygon',{points,fill:'#8fbda3','fill-opacity':'.27','data-series':'sample-range'});band.append(element('title',{},'各时点采样最低至最高收盘价范围，不是置信区间'));if(displaySettings.showBand)svg.append(band);
     function line(rows,offset,color,width=2,opacity=.85,dash){const e=element('polyline',{points:rows.map((r,i)=>`${x(offset+i)},${y(r.close)}`).join(' '),fill:'none',stroke:color,'stroke-width':width,'stroke-opacity':opacity,'stroke-linejoin':'round','stroke-linecap':'round'});if(dash)e.setAttribute('stroke-dasharray',dash);svg.append(e);return e;}
     line(history,0,'#17382d',2.5);
     data.paths.forEach((p,i)=>{const e=line([history.at(-1),...p],start,pathColors[i%pathColors.length],selected===i?3.7:2,selected!==null&&selected!==i?.16:.85);e.append(element('title',{},`路径 ${i+1} · 末根涨跌幅 ${percent(changes[i])}`));});
-    line([{close:base},...summaries.map(r=>({close:r.mid}))],start,'#235a42',2.7,.95,'6 5');
+    if(displaySettings.showMedian)line([{close:base},...summaries.map(r=>({close:r.mid}))],start,'#235a42',2.7,.95,'6 5');
     svg.append(element('line',{x1:L,x2:w-R,y1:y(base),y2:y(base),stroke:'#7a9585','stroke-dasharray':'3 5','stroke-opacity':'.55'}));
     if(view==='history')svg.append(element('line',{x1:x(start),x2:x(start),y1:T,y2:h-B,stroke:'#708b7d','stroke-dasharray':'5 5'}));
     for(const [index,row]of [[0,history[0]],[n-1,data.paths[0].at(-1)]])svg.append(element('text',{x:x(index),y:h-15,'text-anchor':index===0?'start':'end'},fmtTime(row.timestamps)));
@@ -74,11 +77,14 @@ function csv(data){
   const url=URL.createObjectURL(new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='kronos-paths.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 async function load(){
-  try{const response=await fetch('/kronos/forecast.json',{cache:'no-store'});if(response.status===404){$('#status').textContent='尚未生成真实预测。请点击上方“选择币种并生成（GitHub）”，运行预测任务；任务成功并完成网站部署后，再刷新此页。';return;}if(!response.ok)throw Error('读取结果失败，请稍后重试。');const data=await response.json();valid(data);const m=data.metadata;
+  try{
+    try{const settingsResponse=await fetch('/kronos/settings.json',{cache:'no-store'});if(settingsResponse.ok){const setting=await settingsResponse.json();if(typeof setting.title==='string'){displaySettings=setting;$('#page-title').textContent=setting.title;$('#page-description').textContent=setting.description;$('#recommended').textContent=`推荐生成参数：${setting.defaultSymbol} / ${setting.defaultInterval} / ${setting.defaultPaths} 条路径（进入 GitHub 后手动选择）`;}}}catch{}
+    try{const historyResponse=await fetch('/kronos/history.json',{cache:'no-store'});if(historyResponse.ok){const value=await historyResponse.json();if(Array.isArray(value.history)){const select=$('#history-select');select.replaceChildren();for(const record of value.history){const option=document.createElement('option');option.value=record.id;option.textContent=`${fmtTime(record.generated_at_utc)} · ${record.symbol} · ${record.interval} · ${record.paths} 条${record.current?'（当前展示）':''}`;option.selected=record.current;select.append(option);}$('#history-toolbar').hidden=value.history.length<2;select.onchange=async()=>{try{const r=await fetch('/kronos/forecast.json?id='+encodeURIComponent(select.value),{cache:'no-store'});if(!r.ok)throw Error('历史记录已不可用，请刷新页面。');showForecast(await r.json());}catch(e){$('#status').textContent=e.message;}};}}}catch{}
+    const response=await fetch('/kronos/forecast.json',{cache:'no-store'});if(response.status===404){$('#status').textContent='尚未生成真实预测。请点击上方“选择币种并生成（GitHub）”，运行预测任务；任务成功并完成网站部署后，再刷新此页。';return;}if(!response.ok)throw Error('读取结果失败，请稍后重试。');const data=await response.json();valid(data);const m=data.metadata;
     $('#pair').textContent=`${m.symbol} · ${m.interval} · ${data.paths.length} 条路径`;$('#last').textContent=fmtTime(m.last_closed_open_time_utc.replace(' ','T'));$('#generated').textContent=fmtTime(m.generated_at_utc);
-    $('#status').textContent='已加载最近一次成功任务的结果。需要更新时，请运行上方的 GitHub 预测任务。';$('#result').hidden=false;
+    $('#status').textContent='已加载所选预测结果，生成时间与参数见下方。需要更新时，请运行上方的 GitHub 预测任务。';$('#result').hidden=false;
     draw(data);$('#range').textContent=`预测时间：${fmtTime(data.paths[0][0].timestamps)} 至 ${fmtTime(data.paths[0].at(-1).timestamps)}（北京时间，K 线开盘时间）`;
-    if(Date.now()>Date.parse(data.paths[0].at(-1).timestamps.replace(/Z?$/,'Z')))$('#stale').textContent='该预测窗口已经过去，请按历史时点推演查看；需要新结果时请运行新的 GitHub 预测任务。';
+    $('#stale').textContent=Date.now()>Date.parse(data.paths[0].at(-1).timestamps.replace(/Z?$/,'Z'))?'该预测窗口已经过去，请按历史时点推演查看；需要新结果时请运行新的 GitHub 预测任务。':'';
     $('#rows').replaceChildren();
     data.paths[0].forEach((r,i)=>{const values=data.paths.map(p=>p[i].close).sort((a,b)=>a-b),k=values.length>>1,median=values.length%2?values[k]:(values[k-1]+values[k])/2,tr=document.createElement('tr');for(const value of [fmtTime(r.timestamps),number(values[0]),number(median),number(values.at(-1))]){const td=document.createElement('td');td.textContent=value;tr.append(td);}$('#rows').append(tr);});
     $('#download').onclick=()=>csv(data);$('#source').textContent=m.source;

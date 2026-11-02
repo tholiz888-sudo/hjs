@@ -1,5 +1,7 @@
 """Validate real inference output and atomically publish one JSON artifact."""
 import argparse
+import hashlib
+import re
 import datetime as dt
 import json
 import math
@@ -33,6 +35,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('input', type=Path)
     parser.add_argument('--destination', type=Path, default=Path(__file__).parent / 'results' / 'forecast.json')
+    parser.add_argument('--archive', action='store_true', help='Retain the last 50 validated generation results')
     args = parser.parse_args()
     data = validate(json.loads(args.input.read_text()))
     args.destination.parent.mkdir(parents=True, exist_ok=True)
@@ -46,6 +49,22 @@ def main():
     finally:
         if os.path.exists(temp):
             os.unlink(temp)
+    if args.archive:
+        archive_dir = args.destination.parent / 'history'
+        archive_dir.mkdir(parents=True, exist_ok=True)
+        payload = args.destination.read_bytes()
+        name = 'forecast-' + hashlib.sha256(payload).hexdigest()[:24] + '.json'
+        target = archive_dir / name
+        target.write_bytes(payload)
+        retained = []
+        for entry in archive_dir.iterdir():
+            if re.fullmatch(r'forecast-[a-f0-9]{24}\.json', entry.name):
+                existing = validate(json.loads(entry.read_text()))
+                generated = existing['metadata'].get('generated_at_utc', '')
+                retained.append((generated, entry.name, entry))
+        for _, _, entry in sorted(retained, reverse=True)[50:]:
+            if entry != target:
+                entry.unlink()
     print(f'Published {len(data["paths"])} distinct sampled paths: {args.destination}')
 
 if __name__ == '__main__':

@@ -14,8 +14,8 @@ fi
 # Fetch website changes made during inference before writing the result.
 git fetch origin "$DEPLOY_BRANCH"
 git merge --ff-only FETCH_HEAD
-python kronos-render/publish.py "$RUNNER_TEMP/kronos-validated.json"
-git add -- kronos-render/results/forecast.json
+python kronos-render/publish.py "$RUNNER_TEMP/kronos-validated.json" --archive
+git add -- kronos-render/results/forecast.json kronos-render/results/history
 if ! git diff --cached --quiet; then
   git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Publish Kronos sampled forecast'
   git push origin "HEAD:refs/heads/$DEPLOY_BRANCH"
