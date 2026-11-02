@@ -32,6 +32,7 @@
    $('#validation-direction').textContent=entry.direction_hit===null?'待完整事前窗口':entry.direction_hit?'一致':'不一致';
    let verdict=entry.scored_count?`当前统计 ${entry.scored_count} 根可评分 K 线。`:'目前没有可评分的已收盘 K 线。';
    if(entry.mae!==null)verdict+=entry.beats_baseline?' 在这些已匹配点上，预测中位线误差小于价格不变基线。':' 在这些已匹配点上，预测中位线未优于价格不变基线。';
+   if(entry.state==='complete'&&entry.fully_forward&&Number.isFinite(entry.actual_terminal_return_pct)){const signed=v=>(v>0?'+':'')+num(v)+'%';verdict+=` 第 24 根预测涨跌幅 ${signed(entry.predicted_terminal_return_pct)}，实际 ${signed(entry.actual_terminal_return_pct)}（均相对于最后历史收盘价）。`;}
    if(entry.excluded_count)verdict+=` ${entry.excluded_count} 根在预测生成时已经收盘，不计入事前验证。`;
    if(entry.state!=='complete')verdict+=' 这不是完整 24 根预测的最终评分。';$('#validation-verdict').textContent=verdict;
    $('#validation-paths').textContent=entry.path_mae?.length?'各条独立路径平均绝对误差：'+entry.path_mae.map((v,i)=>`路径 ${i+1} ${num(v)}`).join(' · ')+'。不挑选事后最像的一条作为整体成绩。':'';
