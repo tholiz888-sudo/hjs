@@ -50,4 +50,13 @@ export function createServer() {
     }catch(error){send(400,{error:error.message});}
   });
 }
-if(process.argv[1]===fileURLToPath(import.meta.url))createServer().listen(Number(process.env.PORT||3080),process.env.HOST||'127.0.0.1',()=>console.log('Polymarket 模拟研究台已启动，端口 '+(process.env.PORT||3080)));
+export function listenOptions(env = process.env) {
+  const render = env.RENDER === 'true' || Boolean(env.RENDER_SERVICE_ID);
+  return { port: Number(env.PORT || 3080), host: render ? '0.0.0.0' : (env.HOST || '127.0.0.1') };
+}
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const { port, host } = listenOptions();
+  const server = createServer();
+  server.on('error', error => { console.error('启动失败：', error.message); process.exitCode = 1; });
+  server.listen(port, host, () => console.log(`Polymarket 模拟研究台已启动，监听 ${host}:${server.address().port}`));
+}

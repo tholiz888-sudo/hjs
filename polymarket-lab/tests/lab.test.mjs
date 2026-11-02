@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {replay,fill,config,fisher} from '../engine.mjs';
-import {createServer} from '../server.mjs';
+import {createServer,listenOptions} from '../server.mjs';
 const snapshot=(overrides={})=>({market:'test',time:'2026-01-01T00:00:00Z',observedAt:'2026-01-01T00:00:01Z',end:'2026-01-01T00:15:00Z',up:[[.4,100]],down:[[.5,100]],...overrides});
 const settings={feeBps:0,slippageBps:0};
 const settlement=winner=>snapshot({time:'2026-01-01T00:15:00Z',observedAt:'2026-01-01T00:15:01Z',up:[],down:[],winner});
@@ -17,3 +17,9 @@ test('Fisher handles flat prices without infinite values and uses prior trigger'
 test('demo includes real loss scenario and reconciles equity',async()=>{const data=JSON.parse(await readFile(new URL('../public/demo.json',import.meta.url)));const r=replay(data);assert.ok(r.events.some(e=>e.action==='单边暴露'));assert.ok(r.events.some(e=>e.pnl<0));assert.ok(Math.abs(r.cash-1000-r.realized)<1e-8);});
 test('HTTP serves UI and executes replay; rejects invalid requests',async t=>{const server=createServer();await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));t.after(()=>new Promise(resolve=>server.close(resolve)));const base=`http://127.0.0.1:${server.address().port}`;assert.match(await(await fetch(base)).text(),/双边策略研究台/);const r=await fetch(base+'/api/replay',{method:'POST',body:JSON.stringify({snapshots:[snapshot(),settlement('up')],config:settings})});assert.equal(r.status,200);assert.equal((await r.json()).realized,2);assert.equal((await fetch(base+'/api/replay',{method:'POST',body:'{}'})).status,400);assert.equal((await fetch(base+'/api/replay',{method:'POST',headers:{Origin:'https://evil.example'},body:'{}'})).status,403);});
 test('Render health check and HTTPS same-origin replay work',async t=>{const server=createServer();await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));t.after(()=>new Promise(resolve=>server.close(resolve)));const host=`127.0.0.1:${server.address().port}`,base=`http://${host}`;const health=await fetch(base+'/healthz');assert.equal(health.status,200);assert.deepEqual(await health.json(),{status:'ok',mode:'paper-only'});const response=await fetch(base+'/api/replay',{method:'POST',headers:{Origin:`https://${host}`},body:JSON.stringify({snapshots:[snapshot()],config:settings})});assert.equal(response.status,200);assert.equal((await response.json()).events[0].action,'模拟配对');});
+
+test('Render binds all interfaces even with stale localhost HOST',()=>{
+  assert.deepEqual(listenOptions({RENDER:'true',PORT:'10000'}),{port:10000,host:'0.0.0.0'});
+  assert.equal(listenOptions({RENDER_SERVICE_ID:'srv-example',HOST:'127.0.0.1'}).host,'0.0.0.0');
+  assert.equal(listenOptions({}).host,'127.0.0.1');
+});
