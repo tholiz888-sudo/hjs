@@ -13,9 +13,9 @@ $('#export').onclick=()=>{try{download(JSON.parse($('#data').value),'snapshots.j
 
 async function autoRequest(path,method='GET') {
  const headers={};if($('#admin-token').value)headers.Authorization='Bearer '+$('#admin-token').value;
- const response=await fetch('/api/auto/'+path,{method,headers});const data=await response.json();if(!response.ok)throw Error(data.error);return data;
+ const response=await fetch('/api/auto/'+path+(path.includes('?')?'&':'?')+'mode='+encodeURIComponent($('#auto-mode').value),{method,headers});const data=await response.json();if(!response.ok)throw Error(data.error);return data;
 }
-async function autoRefresh(){try{const s=await autoRequest('status');$('#auto-status').textContent=`${s.running?'运行中':'已停止'} · ${s.busy?'本轮采集中':'空闲'} · ${s.count}条快照 · 最近完成：${s.lastRun||'尚无'} · 使用默认模拟参数`;
+async function autoRefresh(){try{const s=await autoRequest('status');$('#auto-status').textContent=`${s.mode==='fisher'?'Fisher分时策略':'双边策略'} · ${s.running?'运行中':'已停止'} · ${s.busy?'本轮采集中':'空闲'} · ${s.count}条快照 · 最近完成：${s.lastRun||'尚无'} · 使用默认模拟参数`;
  $('#auto-metrics').replaceChildren();for(const [label,value] of [['模拟现金',s.report.cash],['已结算盈亏',s.report.realized],['未配对风险',s.report.unpairedRisk],['未结算成本',s.report.openCost]]){const div=document.createElement('div');div.className='metric';div.textContent=label;const b=document.createElement('strong');b.textContent='$'+value.toFixed(2);div.append(b);$('#auto-metrics').append(div);}
  $('#auto-logs').textContent=s.logs.slice(-15).map(x=>x.time+' '+x.message).join('\n')||'尚无采集记录。';
  }catch(e){$('#auto-status').textContent=e.message;}}
@@ -23,3 +23,19 @@ for(const action of ['start','stop'])$('#auto-'+action).onclick=async()=>{try{aw
 $('#auto-refresh').onclick=autoRefresh;
 $('#auto-export').onclick=async()=>{try{download(await autoRequest('export'),'auto-paper-records.json');}catch(e){$('#auto-status').textContent=e.message;}};
 autoRefresh();setInterval(autoRefresh,15000);
+
+let ledgerResult;
+$('#ledger-analyze').onclick=async()=>{const button=$('#ledger-analyze');button.disabled=true;try{
+ const file=$('#ledger-file').files[0];if(!file)throw Error('请先选择全部活动CSV');if(file.size>100*1024*1024)throw Error('文件超过100MB');
+ $('#ledger-status').textContent='正在分析，请等待；不会创建真实订单…';
+ const response=await fetch('/api/ledger',{method:'POST',headers:{Authorization:'Bearer '+$('#admin-token').value,'Content-Type':'text/csv'},body:file});const data=await response.json();if(!response.ok)throw Error(data.error);ledgerResult=data;
+ const {markets}=data;
+ $('#ledger-summary').textContent=[`时间范围：${data.from} 至 ${data.to}（UTC）`,`原始记录：${data.rawRows}；去重后：${data.uniqueRows}；重复：${data.duplicates}`,`市场：${data.marketCount}；双边市场：${data.bothMarkets}；首次两边间隔中位数：${data.medianFirstLegGapSeconds??'无'}秒`,`净交易现金流：$${data.netTradingCash.toFixed(2)}（不是账户净利润）`,`返佣及奖励：$${data.rebates.toFixed(2)}`,`严格子样本：${data.subset.count}个市场，盈利${data.subset.wins}，亏损${data.subset.losses}，持平${data.subset.flat}`,`子样本胜率：${data.subset.winRate===null?'暂无':(data.subset.winRate*100).toFixed(2)+'%'}；子样本损益：$${data.subset.cashPnl.toFixed(2)}`,`出现过负份额的市场：${data.negativeInventoryMarkets}（需核对期初仓位及数据）`,...data.warnings].join('\n');
+ const eligible=markets.filter(m=>m.reconciled&&m.windowInside&&m.minBalance>=-.02).sort((a,b)=>a.cashPnl-b.cashPnl);
+ $('#ledger-markets').textContent=['亏损较高：',...eligible.slice(0,5).map(m=>`${m.title}  $${m.cashPnl.toFixed(2)}`),'盈利较高：',...eligible.slice(-5).reverse().map(m=>`${m.title}  $${m.cashPnl.toFixed(2)}`)].join('\n');
+ $('#ledger-status').textContent=`完成：${data.rawRows}行，${data.marketCount}个市场。现金流及子样本不是完整账户利润。`;
+ }catch(e){ledgerResult=undefined;$('#ledger-summary').textContent='';$('#ledger-markets').textContent='';$('#ledger-status').textContent=e.message;}finally{button.disabled=false;}};
+$('#ledger-export').onclick=()=>{if(ledgerResult)download(ledgerResult,'wallet-ledger-report.json');};
+$('#btc-refresh').onclick=async()=>{try{const r=await fetch('/api/btc');const data=await r.json();if(!r.ok)throw Error(data.error);$('#btc-status').textContent=[data.source,`最近收盘：${new Date(data.latest.time).toLocaleString('zh-CN')}；BTC $${data.latest.close}`,`Fisher：${data.latest.value?.toFixed(4)??'数据不足'}；Trigger：${data.latest.trigger?.toFixed(4)??'数据不足'}`,`候选信号：${data.latest.side==='up'?'Up反转':data.latest.side==='down'?'Down反转':'无极端反转信号'}`].join('\n');}catch(e){$('#btc-status').textContent='行情读取失败：'+e.message;}};
+
+$('#auto-mode').onchange=autoRefresh;

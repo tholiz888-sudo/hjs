@@ -1,6 +1,8 @@
 import http from 'node:http';
 import { timingSafeEqual } from 'node:crypto';
 import { resolve } from 'node:path';
+import { analyzeCSV } from './ledger.mjs';
+import { fetchBTC } from './signals.mjs';
 import { Automation } from './automation.mjs';
 import { readFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
@@ -32,19 +34,31 @@ export async function collect(slug) {
 export function createServer(options = {}) {
   const auto = new Automation({file:options.stateFile || resolve(process.env.LAB_DATA_DIR || fileURLToPath(new URL('./.local/',import.meta.url)), 'paper.json'),remote,collect});
   auto.ready.catch(error=>console.error(error.message));
+  const fisherAuto = new Automation({file:(options.stateFile || resolve(process.env.LAB_DATA_DIR || fileURLToPath(new URL('./.local/',import.meta.url)), 'paper.json'))+'.fisher.json',remote,collect,initialMode:'fisher'});
+  fisherAuto.ready.catch(error=>console.error(error.message));
   const server = http.createServer(async(req,res)=> {
     const send=(status,value)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(value));};
     try {
       const url=new URL(req.url,'http://localhost');
       if(req.method==='GET' && url.pathname==='/healthz') return send(200,{status:'ok',mode:'paper-only'});
+      if(req.method==='GET'&&url.pathname==='/api/btc')return send(200,await fetchBTC(remote));
+      if(req.method==='POST'&&url.pathname==='/api/ledger'){
+        const expected=process.env.LAB_ADMIN_TOKEN,supplied=req.headers.authorization?.replace(/^Bearer /,'')||'';
+        if(!expected||Buffer.byteLength(expected)!==Buffer.byteLength(supplied)||!timingSafeEqual(Buffer.from(expected),Buffer.from(supplied)))return send(401,{error:'导入分析需要管理口令 LAB_ADMIN_TOKEN'});
+        async function* limited(){let bytes=0;for await(const chunk of req){bytes+=chunk.length;if(bytes>100*1024*1024)throw Error('CSV超过100MB，请拆分');yield chunk;}}
+        return send(200,await analyzeCSV(limited()));
+      }
       if(url.pathname.startsWith('/api/auto/')) {
-        if(req.method==='GET' && url.pathname==='/api/auto/status') return send(200,await auto.status());
+        const mode=url.searchParams.get('mode')||'paired';
+        if(!['paired','fisher'].includes(mode))return send(400,{error:'策略模式无效'});
+        const selected = mode==='fisher'?fisherAuto:auto;
+        if(req.method==='GET' && url.pathname==='/api/auto/status') return send(200,await selected.status());
         const expected=process.env.LAB_ADMIN_TOKEN;
         const supplied=req.headers.authorization?.replace(/^Bearer /,'') || '';
         if(!expected || Buffer.byteLength(expected)!==Buffer.byteLength(supplied) || !timingSafeEqual(Buffer.from(expected),Buffer.from(supplied))) return send(401,{error:'请在 Render Environment 设置 LAB_ADMIN_TOKEN，再在页面输入同一管理口令；不是钱包密钥。'});
-        if(req.method==='GET' && url.pathname==='/api/auto/export') {await auto.ready;return send(200,auto.state);}
-        if(req.method==='POST' && url.pathname==='/api/auto/start') {await auto.start();return send(200,{running:true});}
-        if(req.method==='POST' && url.pathname==='/api/auto/stop') {auto.stop();return send(200,{running:false});}
+        if(req.method==='GET' && url.pathname==='/api/auto/export') {await selected.ready;return send(200,selected.state);}
+        if(req.method==='POST' && url.pathname==='/api/auto/start') {await selected.start(undefined,mode);return send(200,{running:true});}
+        if(req.method==='POST' && url.pathname==='/api/auto/stop') {selected.stop();return send(200,{running:false});}
         return send(404,{error:'未找到'});
       }
       if(req.method==='POST' && url.pathname==='/api/replay') {
@@ -64,7 +78,7 @@ export function createServer(options = {}) {
       res.writeHead(200,{'Content-Type':file.endsWith('.html')?'text/html; charset=utf-8':file.endsWith('.css')?'text/css':file.endsWith('.js')?'text/javascript':'application/json','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; object-src 'none'; frame-ancestors 'none'"});res.end(await readFile(root+file));
     }catch(error){send(400,{error:error.message});}
   });
-  server.on('close',()=>auto.stop());
+  server.on('close',()=>{auto.stop();fisherAuto.stop();});
   return server;
 }
 export function listenOptions(env = process.env) {

@@ -1,0 +1,34 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {csvRows,analyzeCSV} from '../ledger.mjs';
+import {signals,fetchBTC} from '../signals.mjs';
+import {replayFisher} from '../fisher-paper.mjs';
+import {createServer} from '../server.mjs';
+import {mkdtemp,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+async function* chunks(text){const bytes=Buffer.from(text);for(let i=0;i<bytes.length;i+=3)yield bytes.subarray(i,i+3);}
+const csv='timestamp,type,size,usdc_size,condition_id,side,outcome,slug,title,proxy_wallet\n100,TRADE,500,310,c,BUY,Up,btc-updown-5m-100,test,w\n110,TRADE,500,470,c,BUY,Down,btc-updown-5m-100,test,w\n120,MERGE,500,500,c,,,btc-updown-5m-100,test,w\n';
+test('CSV handles multibyte text and quoted multiline across chunks',async()=>{const values=[];for await(const r of csvRows(chunks('\uFEFFname,note\r\n中文,"one,""two""\nthree"\r\n')))values.push(r);assert.deepEqual(values,[['name','note'],['中文','one,"two"\nthree']]);});
+test('ledger reconciles merge loss, does not call cash returns profit',async()=>{const r=await analyzeCSV(chunks(csv));assert.equal(r.netTradingCash,-280);assert.equal(r.markets[0].up,0);assert.equal(r.markets[0].down,0);assert.equal(r.markets[0].cashPnl,-280);});
+test('ledger counts zero redemption losses and separates rebates/deposits',async()=>{const data='timestamp,type,size,usdc_size,condition_id,side,outcome,slug,title\n1,DEPOSIT,100,100,,,,,\n2,TRADE,10,8,c,BUY,Up,btc-updown-5m-1,t\n302,REDEEM,10,0,c,,Up,btc-updown-5m-1,t\n303,MAKER_REBATE,2,2,,,,,\n';const r=await analyzeCSV(chunks(data));assert.equal(r.netTradingCash,-8);assert.equal(r.rebates,2);assert.equal(r.subset.losses,1);});
+test('ledger detects exact duplicates and refuses unsupported activities',async()=>{const duplicate=csv+csv.split('\n')[1]+'\n';assert.equal((await analyzeCSV(chunks(duplicate))).duplicates,1);await assert.rejects(analyzeCSV(chunks(csv.replace('MERGE','UNKNOWN'))),/未支持/);});
+const base=Date.parse('2026-01-01T00:00:00Z');
+const candles=[...Array.from({length:30},(_,i)=>100-i),...Array.from({length:20},(_,i)=>71+i*2)].map((close,i)=>({time:base+i*60000,close}));
+const signal=signals(candles).find(s=>s.side==='up');
+const snapshot=(t,extra={})=>({market:'m',time:new Date(t).toISOString(),observedAt:new Date(t).toISOString(),end:new Date(signal.time+300000).toISOString(),up:[[.4,100]],down:[[.4,100]],...extra});
+const settings={feeBps:0,slippageBps:0};
+test('Fisher uses extreme reversals; no future candle can trigger earlier entry',()=>{assert.ok(signal);const r=replayFisher([snapshot(signal.time-1)],settings,candles);assert.equal(r.spent,0);const gap=candles.map((c,i)=>({...c,time:c.time+(i>=30?60000:0)}));assert.equal(signals(gap).find(s=>s.side==='up'),undefined);});
+test('directional entry then later hedge and merge reconciles cash',()=>{const r=replayFisher([snapshot(signal.time),snapshot(signal.time+10000)],settings,candles);assert.equal(r.realized,4);assert.equal(r.cash,1004);assert.equal(r.openCost,0);assert.equal(r.events[0].action,'模拟方向买入');assert.equal(r.events[1].action,'模拟合并');});
+test('unhedged direction can lose whole position on settlement',()=>{const t=signal.time+301000;const r=replayFisher([snapshot(signal.time),snapshot(t,{up:[],down:[],winner:'down'})],settings,candles);assert.equal(r.realized,-8);assert.equal(r.cash,992);});
+test('timed hedge may lock loss; daily cap blocks fresh risk',()=>{const r=replayFisher([snapshot(signal.time),snapshot(signal.time+121000,{down:[[.8,100]]})],settings,candles);assert.equal(r.realized,-4);assert.equal(r.cash,996);assert.equal(replayFisher([snapshot(signal.time)],{...settings,maxDailyLoss:0},candles).spent,0);});
+test('BTC feed excludes unclosed candle and fails on stale data',async()=>{const now=base+60*60000;const raw=Array.from({length:61},(_,i)=>[(base+i*60000)/1000,90,110,100,100,1]).reverse();const r=await fetchBTC(async()=>raw,now);assert.ok(r.candles.every(c=>c.time<=now));assert.equal(r.candles.length,60);await assert.rejects(fetchBTC(async()=>raw,now+600000),/过期/);});
+test('HTTP ledger requires token and accepts streamed CSV; mode isolation',async t=>{const dir=await mkdtemp(join(tmpdir(),'paper-ledger-'));const previous=process.env.LAB_ADMIN_TOKEN;process.env.LAB_ADMIN_TOKEN='test-management-token';const server=createServer({stateFile:join(dir,'state.json')});await new Promise(r=>server.listen(0,'127.0.0.1',r));t.after(async()=>{if(previous===undefined)delete process.env.LAB_ADMIN_TOKEN;else process.env.LAB_ADMIN_TOKEN=previous;await new Promise(r=>server.close(r));await rm(dir,{recursive:true,force:true});});const base=`http://127.0.0.1:${server.address().port}`;assert.equal((await fetch(base+'/api/ledger',{method:'POST',body:csv})).status,401);const r=await fetch(base+'/api/ledger',{method:'POST',headers:{Authorization:'Bearer test-management-token'},body:csv});assert.equal(r.status,200);assert.equal((await r.json()).netTradingCash,-280);assert.equal((await fetch(base+'/api/auto/status?mode=unknown')).status,400);assert.equal((await fetch(base+'/api/auto/status?mode=fisher')).status,200);});
+test('Fisher automation collects feed, persists directional entry then merges on later tick',async t=>{
+ const {Automation}=await import('../automation.mjs');const dir=await mkdtemp(join(tmpdir(),'fisher-auto-'));t.after(()=>rm(dir,{recursive:true,force:true}));let now=signal.time;
+ const slug='btc-updown-5m-'+String((signal.time-60000)/1000),end=new Date(signal.time+300000).toISOString();
+ const raw=candles.map(c=>[(c.time-60000)/1000,c.close,c.close,c.close,c.close,1]);
+ const a=new Automation({file:join(dir,'fisher.json'),initialMode:'fisher',now:()=>now,remote:async url=>url.includes('coinbase')?raw:[{slug,endDate:end,outcomes:['Up','Down']}],collect:async()=>({snapshot:{...snapshot(now),market:'auto-fisher',end}})});
+ await a.ready;a.state.config={...a.state.config,...settings};a.running=true;await a.tick();assert.equal((await a.status()).report.events[0].action,'模拟方向买入');now+=10000;await a.tick();a.stop();assert.equal((await a.status()).report.realized,4);
+ const restored=new Automation({file:join(dir,'fisher.json')});assert.equal((await restored.status()).report.cash,1004);assert.equal(restored.state.mode,'fisher');
+});
