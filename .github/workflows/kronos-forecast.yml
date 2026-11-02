@@ -1,4 +1,5 @@
 name: Kronos 在线生成预测
+run-name: "Kronos ${{ inputs.symbol || 'BTCUSDT' }} · ${{ inputs.interval || '1h' }} [${{ inputs.request_id || github.run_number }}]"
 
 on:
   workflow_dispatch:
@@ -18,6 +19,10 @@ on:
         type: choice
         default: '3'
         options: ['2', '3', '5']
+      request_id:
+        description: 网站请求标识（手动运行时留空）
+        type: string
+        required: false
   # First publication generates a result automatically. Result commits do not loop.
   push:
     branches: [main]
