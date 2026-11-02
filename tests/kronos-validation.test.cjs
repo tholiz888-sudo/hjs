@@ -12,3 +12,7 @@ test('missing validation is clearly distinguished from a failed forecast',async(
 test('stale actual data is labelled and incomplete windows cannot show terminal hit',async()=>{
  const {data,key,rows}=fixture();const app=ui({entries:{[key]:{state:'incomplete_data',rows,fetch_error:true,baseline_close:100,matched_count:5,scored_count:5,excluded_count:2,mae:1,baseline_mae:2,mape_pct:1,sample_coverage_pct:100,direction_hit:null,beats_baseline:true,path_mae:[],checked_at_utc:'2026-01-01T05:00:00Z'}},complete_forward_count:0});await app.render(data);assert.match(app.nodes.get('#validation-status').textContent,/上一次验证/);assert.match(app.nodes.get('#validation-verdict').textContent,/不计入事前验证/);
 });
+
+test('completed forward window reports an incorrect terminal direction without hiding the actual return',async()=>{
+ const {data,key,rows}=fixture();rows.forEach(r=>{r.actual_close=99;});const app=ui({entries:{[key]:{state:'complete',rows,fully_forward:true,baseline_close:100,matched_count:24,scored_count:24,excluded_count:0,mae:2,baseline_mae:1,mape_pct:2,sample_coverage_pct:0,direction_hit:false,beats_baseline:false,predicted_terminal_return_pct:1,actual_terminal_return_pct:-1,path_mae:[2,3],checked_at_utc:'2026-01-02T00:00:00Z'}},complete_forward_count:1});await app.render(data);assert.equal(app.nodes.get('#validation-direction').textContent,'不一致');assert.match(app.nodes.get('#validation-verdict').textContent,/未优于/);assert.match(app.nodes.get('#validation-verdict').textContent,/预测涨跌幅 \+1%，实际 -1%/);
+});
