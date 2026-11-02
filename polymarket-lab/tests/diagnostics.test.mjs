@@ -1,0 +1,5 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {diagnostics} from '../diagnostics.mjs';
+test('diagnostics explains no fills while snapshots are collected',()=>{const state={mode:'fisher',config:{},candles:[],snapshots:[{observedAt:'2026-01-01T00:00:01Z'}],lastRun:'2026-01-01T00:00:02Z'};const report={events:[{time:'2026-01-01T00:00:01Z',market:'m',action:'跳过',detail:'没有新鲜的已收盘Fisher极端反转信号'}]};const d=diagnostics(state,report,Date.parse('2026-01-01T00:00:03Z'));assert.equal(d.actions['跳过'],1);assert.equal(d.latestDecision.action,'跳过');assert.equal(d.latestSignal,null);assert.equal(d.warning,null);assert.equal(d.lastRunAgeSeconds,1);});
+test('diagnostics detects stale candles and limits recent decisions',()=>{const now=Date.parse('2026-01-01T00:10:00Z');const state={mode:'fisher',config:{},candles:[{time:now-240000,close:100}],snapshots:[],lastRun:new Date(now).toISOString()};const report={events:Array.from({length:20},()=>({action:'等待补仓',detail:'深度不足'}))};const d=diagnostics(state,report,now);assert.match(d.warning,/过期/);assert.equal(d.recentDecisions.length,8);assert.equal(d.skipReasons['深度不足'],20);});

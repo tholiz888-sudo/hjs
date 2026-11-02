@@ -15,8 +15,13 @@ async function autoRequest(path,method='GET') {
  const headers={};if($('#admin-token').value)headers.Authorization='Bearer '+$('#admin-token').value;
  const response=await fetch('/api/auto/'+path+(path.includes('?')?'&':'?')+'mode='+encodeURIComponent($('#auto-mode').value),{method,headers});const data=await response.json();if(!response.ok)throw Error(data.error);return data;
 }
-async function autoRefresh(){try{const s=await autoRequest('status');$('#auto-status').textContent=`${s.mode==='fisher'?'Fisher分时策略':'双边策略'} · ${s.running?'运行中':'已停止'} · ${s.busy?'本轮采集中':'空闲'} · ${s.count}条快照 · 最近完成：${s.lastRun||'尚无'} · 使用默认模拟参数`;
+async function autoRefresh(){try{const s=await autoRequest('status');$('#auto-status').textContent=`${s.mode==='fisher'?'Fisher分时策略':'双边策略'} · ${s.running?'运行中':'已停止'} · ${s.busy?'本轮采集中':'空闲'} · ${s.count}条快照 · 最近完成：${s.lastRun?new Date(s.lastRun).toLocaleString('zh-CN'):'尚无'} · 使用默认模拟参数`;
  $('#auto-metrics').replaceChildren();for(const [label,value] of [['模拟现金',s.report.cash],['已结算盈亏',s.report.realized],['未配对风险',s.report.unpairedRisk],['未结算成本',s.report.openCost]]){const div=document.createElement('div');div.className='metric';div.textContent=label;const b=document.createElement('strong');b.textContent='$'+value.toFixed(2);div.append(b);$('#auto-metrics').append(div);}
+ const d=s.diagnostics;
+ $('#auto-start').disabled=s.running||s.busy;$('#auto-start').textContent=s.running?'正在自动模拟':'开始自动模拟';$('#auto-stop').disabled=!s.running;
+ if(d){const sig=d.latestSignal;const n=Object.entries(d.actions).map(([k,v])=>`${k} ${v}次`).join('；')||'暂无';
+ $('#auto-diagnostics').textContent=[s.running?'任务已启动，不会每轮都买入。':'任务已停止，点击开始才会继续采集。',`累计判断：${n}`,`最新盘口接收：${d.lastSnapshotTime?new Date(d.lastSnapshotTime).toLocaleString('zh-CN'):'尚无'}`,sig?`BTC $${sig.close}；Fisher ${sig.value?.toFixed(4)??'不足'}；Trigger ${sig.trigger?.toFixed(4)??'不足'}；最近分钟信号：${sig.side==='up'?'Up反转':sig.side==='down'?'Down反转':'未触发极端反转'}`:'尚无BTC指标数据（双边模式无需该指标）',d.latestDecision?`最近决策：${d.latestDecision.action} · ${d.latestDecision.detail}`:'尚无交易判断，等待盘口',d.warning||'资金不变通常表示尚未成交；具体以最近决策为准。','说明：这里执行的是模拟判断，不是真实订单，也不会为了产生成交放宽条件。'].join('\n');
+ $('#auto-decisions').textContent=d.recentDecisions.map(e=>`${new Date(e.time).toLocaleString('zh-CN')} · ${e.market}\n${e.action}：${e.detail}`).join('\n\n')||'等待第一轮判断。';}
  $('#auto-logs').textContent=s.logs.slice(-15).map(x=>x.time+' '+x.message).join('\n')||'尚无采集记录。';
  }catch(e){$('#auto-status').textContent=e.message;}}
 for(const action of ['start','stop'])$('#auto-'+action).onclick=async()=>{try{await autoRequest(action,'POST');await autoRefresh();}catch(e){$('#auto-status').textContent=e.message;}};

@@ -3,6 +3,7 @@ import {dirname} from 'node:path';
 import {config,replay} from './engine.mjs';
 import {fetchBTC} from './signals.mjs';
 import {replayFisher} from './fisher-paper.mjs';
+import {diagnostics} from './diagnostics.mjs';
 const decode=x=>typeof x==='string'?JSON.parse(x):x;
 export async function discover(remote,now=Date.now()) {
   const found=[];
@@ -45,6 +46,7 @@ export class Automation {
   append(s){if(this.state.snapshots.some(x=>x.market===s.market&&x.time===s.time))return;const next=[...this.state.snapshots,s].sort((a,b)=>Date.parse(a.time)-Date.parse(b.time));this.report(next);this.state.snapshots=next;}
   async tick(){if(this.busy||!this.running)return;this.busy=true;
     try{
+      const before=this.state.snapshots.length;
       if(this.state.snapshots.length>=4990){this.stop();throw Error('已达5000条安全上限，请导出记录；未删除任何历史仓位');}
       for(const [slug,m] of Object.entries(this.state.markets)) {
         if(!this.running)break;
@@ -64,9 +66,10 @@ export class Automation {
       if(this.state.mode==='fisher')slugs=slugs.filter(slug=>slug.startsWith('btc-')&&Number(slug.split('-').at(-1))*1000<=this.now());
       if(!slugs.length)this.log('本次有限范围扫描未发现匹配市场；不表示全平台无机会');
       for(const slug of slugs){if(!this.running)break;try{const result=await this.collect(slug);this.append(result.snapshot);this.state.markets[slug]={...this.state.markets[slug],market:result.snapshot.market,end:result.snapshot.end};}catch(e){this.log('采集失败 '+slug+'：'+e.message.slice(0,200));}}
+      if(this.state.snapshots.length>before){const result=this.report();const event=result.events.at(-1);this.log(`本轮新增${this.state.snapshots.length-before}条；最近判断：${event?.action||'暂无'} · ${event?.detail||'暂无'}`);}
       this.state.lastRun=new Date(this.now()).toISOString();
     }catch(e){this.log(e.message.slice(0,400));}
     finally{try{await this.save();}catch(e){this.stop();this.log('保存失败，已停止：'+e.message);}this.busy=false;}
   }
-  async status(){await this.ready;const report=this.report();return {mode:this.state.mode,latestCandle:this.state.candles?.at(-1)||null,running:this.running,busy:this.busy,lastRun:this.state.lastRun,count:this.state.snapshots.length,logs:this.state.logs,report};}
+  async status(){await this.ready;const report=this.report();return {diagnostics:diagnostics(this.state,report,this.now()),mode:this.state.mode,latestCandle:this.state.candles?.at(-1)||null,running:this.running,busy:this.busy,lastRun:this.state.lastRun,count:this.state.snapshots.length,logs:this.state.logs,report};}
 }
