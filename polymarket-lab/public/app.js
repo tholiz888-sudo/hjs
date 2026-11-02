@@ -10,3 +10,16 @@ $('#file').onchange=async e=>{try{const f=e.target.files[0];if(!f)return;if(f.si
 $('#settings').onsubmit=async e=>{e.preventDefault();try{const config=Object.fromEntries([...new FormData(e.target)].map(([k,v])=>[k,Number(v)]));const response=await fetch('/api/replay',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({config,snapshots:JSON.parse($('#data').value)})});const data=await response.json();if(!response.ok)throw Error(data.error);render(data);status('回放完成。模拟结果不代表实盘收益。');}catch(e){$('#result').hidden=true;report=undefined;status(e.message);}};
 $('#collect').onclick=async()=>{const button=$('#collect');button.disabled=true;status('正在读取公开市场和双边盘口…');try{const r=await fetch('/api/collect?slug='+encodeURIComponent($('#slug').value.trim()));const data=await r.json();if(!r.ok)throw Error(data.error);const rows=$('#data').value.trim()?JSON.parse($('#data').value):[];if(!Array.isArray(rows))throw Error('当前数据不是数组');rows.push(data.snapshot);$('#data').value=JSON.stringify(rows,null,2);$('#source').textContent='采集追加：'+data.title;status('已追加一条真实盘口；尚未模拟成交。');}catch(e){status(e.message);}finally{button.disabled=false;}};
 $('#export').onclick=()=>{try{download(JSON.parse($('#data').value),'snapshots.json');}catch(e){status(e.message);}};$('#report').onclick=()=>{if(report)download(report,'paper-report.json');};
+
+async function autoRequest(path,method='GET') {
+ const headers={};if($('#admin-token').value)headers.Authorization='Bearer '+$('#admin-token').value;
+ const response=await fetch('/api/auto/'+path,{method,headers});const data=await response.json();if(!response.ok)throw Error(data.error);return data;
+}
+async function autoRefresh(){try{const s=await autoRequest('status');$('#auto-status').textContent=`${s.running?'运行中':'已停止'} · ${s.busy?'本轮采集中':'空闲'} · ${s.count}条快照 · 最近完成：${s.lastRun||'尚无'} · 使用默认模拟参数`;
+ $('#auto-metrics').replaceChildren();for(const [label,value] of [['模拟现金',s.report.cash],['已结算盈亏',s.report.realized],['未配对风险',s.report.unpairedRisk],['未结算成本',s.report.openCost]]){const div=document.createElement('div');div.className='metric';div.textContent=label;const b=document.createElement('strong');b.textContent='$'+value.toFixed(2);div.append(b);$('#auto-metrics').append(div);}
+ $('#auto-logs').textContent=s.logs.slice(-15).map(x=>x.time+' '+x.message).join('\n')||'尚无采集记录。';
+ }catch(e){$('#auto-status').textContent=e.message;}}
+for(const action of ['start','stop'])$('#auto-'+action).onclick=async()=>{try{await autoRequest(action,'POST');await autoRefresh();}catch(e){$('#auto-status').textContent=e.message;}};
+$('#auto-refresh').onclick=autoRefresh;
+$('#auto-export').onclick=async()=>{try{download(await autoRequest('export'),'auto-paper-records.json');}catch(e){$('#auto-status').textContent=e.message;}};
+autoRefresh();setInterval(autoRefresh,15000);

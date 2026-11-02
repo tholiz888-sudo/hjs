@@ -7,7 +7,7 @@ export function config(input = {}) {
   return c;
 }
 export function validate(rows) {
-  if (!Array.isArray(rows) || !rows.length || rows.length > 10000) throw Error('需要 1～10000 条盘口快照');
+  if (!Array.isArray(rows) || rows.length > 10000) throw Error('需要最多10000条盘口快照的数组');
   let previous = -Infinity;
   const seen = new Set();
   return rows.map((s) => {
