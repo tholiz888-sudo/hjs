@@ -82,3 +82,6 @@ jobs:
           python kronos-render/publish.py "$RUNNER_TEMP/kronos-output/forecast.json" --destination "$RUNNER_TEMP/kronos-validated.json"
       - name: Publish only the validated prediction to Render's branch
         run: bash kronos-render/ci-publish.sh
+      - name: Update historical forecast validation
+        continue-on-error: true
+        run: bash kronos-render/ci-validate.sh
