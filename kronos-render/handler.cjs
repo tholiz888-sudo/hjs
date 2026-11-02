@@ -3,7 +3,7 @@ const fs=require('node:fs'),path=require('node:path');
 const root=__dirname;
 function handleKronos(req,res){
   const pathname=new URL(req.url,'http://localhost').pathname;
-  const files={'/kronos/':'index.html','/kronos/index.html':'index.html','/kronos/app.js':'app.js','/kronos/admin.js':'admin.js','/kronos/style.css':'style.css','/kronos/forecast.json':'results/forecast.json'};
+  const files={'/kronos/':'index.html','/kronos/index.html':'index.html','/kronos/app.js':'app.js','/kronos/validation.js':'validation.js','/kronos/evaluations.json':'results/evaluations.json','/kronos/admin.js':'admin.js','/kronos/style.css':'style.css','/kronos/forecast.json':'results/forecast.json'};
   res.setHeader('X-Content-Type-Options','nosniff');
   res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'; frame-src 'none'");
   if(!['GET','HEAD'].includes(req.method)){res.writeHead(405,{'Allow':'GET, HEAD'});return res.end();}

@@ -83,8 +83,9 @@ async function load(){
     const response=await fetch('/kronos/forecast.json',{cache:'no-store'});if(response.status===404){$('#status').textContent='尚未生成真实预测。请点击上方“选择币种并生成（GitHub）”，运行预测任务；任务成功并完成网站部署后，再刷新此页。';return;}if(!response.ok)throw Error('读取结果失败，请稍后重试。');const data=await response.json();valid(data);const m=data.metadata;
     $('#pair').textContent=`${m.symbol} · ${m.interval} · ${data.paths.length} 条路径`;$('#last').textContent=fmtTime(m.last_closed_open_time_utc.replace(' ','T'));$('#generated').textContent=fmtTime(m.generated_at_utc);
     $('#status').textContent='已加载所选预测结果，生成时间与参数见下方。需要更新时，请运行上方的 GitHub 预测任务。';$('#result').hidden=false;
+    if(typeof window!=='undefined')window.KronosValidation?.render(data);
     draw(data);$('#range').textContent=`预测时间：${fmtTime(data.paths[0][0].timestamps)} 至 ${fmtTime(data.paths[0].at(-1).timestamps)}（北京时间，K 线开盘时间）`;
-    $('#stale').textContent=Date.now()>Date.parse(data.paths[0].at(-1).timestamps.replace(/Z?$/,'Z'))?'该预测窗口已经过去，请按历史时点推演查看；需要新结果时请运行新的 GitHub 预测任务。':'';
+    $('#stale').textContent=Date.now()>(Date.parse(data.paths[0].at(-1).timestamps.replace(/Z?$/,'Z'))+({'15m':900000,'1h':3600000,'4h':14400000,'1d':86400000}[m.interval]||0))?'该预测窗口已经过去，请按历史时点推演查看；需要新结果时请运行新的 GitHub 预测任务。':'';
     $('#rows').replaceChildren();
     data.paths[0].forEach((r,i)=>{const values=data.paths.map(p=>p[i].close).sort((a,b)=>a-b),k=values.length>>1,median=values.length%2?values[k]:(values[k-1]+values[k])/2,tr=document.createElement('tr');for(const value of [fmtTime(r.timestamps),number(values[0]),number(median),number(values.at(-1))]){const td=document.createElement('td');td.textContent=value;tr.append(td);}$('#rows').append(tr);});
     $('#download').onclick=()=>csv(data);$('#source').textContent=m.source;
