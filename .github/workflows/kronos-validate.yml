@@ -1,3 +1,4 @@
+# Includes all retained original Git prediction snapshots, including the initial backfill.
 name: Kronos 更新预测与实际对照
 on:
   workflow_dispatch:
