@@ -4,6 +4,7 @@ import {config,replay} from './engine.mjs';
 import {fetchBTC} from './signals.mjs';
 import {replayFisher} from './fisher-paper.mjs';
 import {diagnostics} from './diagnostics.mjs';
+import {auditPortfolio} from './complete-set.mjs';
 const decode=x=>typeof x==='string'?JSON.parse(x):x;
 export async function discover(remote,now=Date.now()) {
   const found=[];
@@ -71,5 +72,5 @@ export class Automation {
     }catch(e){this.log(e.message.slice(0,400));}
     finally{try{await this.save();}catch(e){this.stop();this.log('保存失败，已停止：'+e.message);}this.busy=false;}
   }
-  async status(){await this.ready;const report=this.report();return {diagnostics:diagnostics(this.state,report,this.now()),mode:this.state.mode,latestCandle:this.state.candles?.at(-1)||null,running:this.running,busy:this.busy,lastRun:this.state.lastRun,count:this.state.snapshots.length,logs:this.state.logs,report};}
+  async status(){await this.ready;const report=this.report();return {completeSetFloor:auditPortfolio({cash:report.cash,capital:report.config.capital,positions:report.positions}),diagnostics:diagnostics(this.state,report,this.now()),mode:this.state.mode,latestCandle:this.state.candles?.at(-1)||null,running:this.running,busy:this.busy,lastRun:this.state.lastRun,count:this.state.snapshots.length,logs:this.state.logs,report};}
 }
