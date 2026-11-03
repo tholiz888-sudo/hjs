@@ -1,4 +1,6 @@
 import http from 'node:http';
+import { LiveTrading } from './live.mjs';
+import { safeVenueError } from './live-sdk.mjs';
 import { timingSafeEqual } from 'node:crypto';
 import { resolve } from 'node:path';
 import { analyzeCSV } from './ledger.mjs';
@@ -36,10 +38,29 @@ export function createServer(options = {}) {
   auto.ready.catch(error=>console.error(error.message));
   const fisherAuto = new Automation({file:(options.stateFile || resolve(process.env.LAB_DATA_DIR || fileURLToPath(new URL('./.local/',import.meta.url)), 'paper.json'))+'.fisher.json',remote,collect,initialMode:'fisher'});
   fisherAuto.ready.catch(error=>console.error(error.message));
+  const live=options.live || new LiveTrading({file:resolve(process.env.LIVE_DATA_DIR || fileURLToPath(new URL('./.local/live-disabled/',import.meta.url)), 'orders.sqlite')});
   const server = http.createServer(async(req,res)=> {
     const send=(status,value)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(value));};
     try {
       const url=new URL(req.url,'http://localhost');
+      if(url.pathname.startsWith('/api/live/')){
+        const expected=process.env.LAB_ADMIN_TOKEN,supplied=req.headers.authorization?.replace(/^Bearer /,'')||'';
+        if(!expected||Buffer.byteLength(expected)!==Buffer.byteLength(supplied)||!timingSafeEqual(Buffer.from(expected),Buffer.from(supplied)))return send(401,{error:'实盘账户信息与操作需要管理口令'});
+        if(req.headers.origin){const origin=new URL(req.headers.origin);if(!['http:','https:'].includes(origin.protocol)||origin.host!==req.headers.host)return send(403,{error:'不接受跨站实盘请求'});}
+        const action=url.pathname.slice('/api/live/'.length);
+        if(req.method==='GET'&&action==='status')return send(200,live.status());
+        if(req.method!=='POST')return send(405,{error:'实盘操作必须使用POST'});
+        let text='';for await(const chunk of req){text+=chunk;if(Buffer.byteLength(text)>8192)return send(413,{error:'请求过大'});}const body=text?JSON.parse(text):{};
+        try{
+          if(action==='connect')return send(200,await live.preflight());
+          if(action==='preview')return send(200,await live.preview(body));
+          if(action==='submit')return send(200,await live.submit(body));
+          if(action==='query')return send(200,await live.query(body.id));
+          if(action==='cancel')return send(200,await live.cancel(body.id));
+          if(action==='halt')return send(200,live.halt());
+          return send(404,{error:'未知实盘操作'});
+        }catch(error){const safe=safeVenueError(error);if(error.name==='LiveInputError')safe.message=error.message.slice(0,250).replace(/0x[0-9a-fA-F]{64}/g,'[已隐藏]');return send(400,{error:safe.message,code:safe.code});}
+      }
       if(req.method==='GET' && url.pathname==='/healthz') return send(200,{status:'ok',mode:'paper-only'});
       if(req.method==='GET'&&url.pathname==='/api/btc')return send(200,await fetchBTC(remote));
       if(req.method==='POST'&&url.pathname==='/api/ledger'){
@@ -78,7 +99,7 @@ export function createServer(options = {}) {
       res.writeHead(200,{'Content-Type':file.endsWith('.html')?'text/html; charset=utf-8':file.endsWith('.css')?'text/css':file.endsWith('.js')?'text/javascript':'application/json','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; object-src 'none'; frame-ancestors 'none'"});res.end(await readFile(root+file));
     }catch(error){send(400,{error:error.message});}
   });
-  server.on('close',()=>{auto.stop();fisherAuto.stop();});
+  server.on('close',()=>{auto.stop();fisherAuto.stop();live.close();});
   return server;
 }
 export function listenOptions(env = process.env) {

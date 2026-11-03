@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     rootDir: polymarket-lab
-    buildCommand: npm test
+    buildCommand: npm ci && npm test
     startCommand: npm start
     healthCheckPath: /healthz
     envVars:
