@@ -39,8 +39,10 @@ export function createServer(options = {}) {
   auto.ready.catch(error=>console.error(error.message));
   const fisherAuto = new Automation({file:(options.stateFile || resolve(process.env.LAB_DATA_DIR || fileURLToPath(new URL('./.local/',import.meta.url)), 'paper.json'))+'.fisher.json',remote,collect,initialMode:'fisher'});
   fisherAuto.ready.catch(error=>console.error(error.message));
-  const inventoryAuto = new Automation({file:(options.stateFile || resolve(process.env.LAB_DATA_DIR || fileURLToPath(new URL('./.local/',import.meta.url)), 'paper.json'))+'.inventory.json',remote,collect,initialMode:'inventory'});
+  const inventoryAuto = new Automation({file:(options.stateFile || resolve(process.env.LAB_DATA_DIR || fileURLToPath(new URL('./.local/',import.meta.url)), 'paper.json'))+'.inventory-v2.json',remote,collect,initialMode:'inventory'});
   inventoryAuto.ready.catch(error=>console.error(error.message));
+  const legacyInventoryAuto = new Automation({file:(options.stateFile || resolve(process.env.LAB_DATA_DIR || fileURLToPath(new URL('./.local/',import.meta.url)), 'paper.json'))+'.inventory.json',remote,collect,initialMode:'inventory',initialInventoryVersion:1});
+  legacyInventoryAuto.ready.catch(error=>console.error(error.message));
   const live=options.live || new LiveTrading({file:resolve(process.env.LIVE_DATA_DIR || fileURLToPath(new URL('./.local/live-disabled/',import.meta.url)), 'orders.sqlite')});
   const server = http.createServer(async(req,res)=> {
     const send=(status,value)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(value));};
@@ -74,14 +76,15 @@ export function createServer(options = {}) {
       }
       if(url.pathname.startsWith('/api/auto/')) {
         const mode=url.searchParams.get('mode')||'paired';
-        if(!['paired','fisher','inventory'].includes(mode))return send(400,{error:'策略模式无效'});
-        const selected = mode==='inventory'?inventoryAuto:mode==='fisher'?fisherAuto:auto;
+        if(!['paired','fisher','inventory','inventory-v1'].includes(mode))return send(400,{error:'策略模式无效'});
+        const selected = mode==='inventory-v1'?legacyInventoryAuto:mode==='inventory'?inventoryAuto:mode==='fisher'?fisherAuto:auto;
         if(req.method==='GET' && url.pathname==='/api/auto/status') return send(200,await selected.status());
         const expected=process.env.LAB_ADMIN_TOKEN;
         const supplied=req.headers.authorization?.replace(/^Bearer /,'') || '';
         if(!expected || Buffer.byteLength(expected)!==Buffer.byteLength(supplied) || !timingSafeEqual(Buffer.from(expected),Buffer.from(supplied))) return send(401,{error:'请在 Render Environment 设置 LAB_ADMIN_TOKEN，再在页面输入同一管理口令；不是钱包密钥。'});
         if(req.method==='GET' && url.pathname==='/api/auto/export') {await selected.ready;return send(200,selected.state);}
-        if(req.method==='POST' && url.pathname==='/api/auto/start') {await selected.start(undefined,mode);return send(200,{running:true});}
+        if(req.method==='POST' && url.pathname==='/api/auto/start') {await selected.start(undefined,mode==='inventory-v1'?'inventory':mode);return send(200,{running:true});}
+        if(req.method==='POST' && url.pathname==='/api/auto/check-settlements')return send(200,await selected.checkSettlements());
         if(req.method==='POST' && url.pathname==='/api/auto/stop') {selected.stop();return send(200,{running:false});}
         return send(404,{error:'未找到'});
       }
@@ -102,7 +105,7 @@ export function createServer(options = {}) {
       res.writeHead(200,{'Content-Type':file.endsWith('.html')?'text/html; charset=utf-8':file.endsWith('.css')?'text/css':file.endsWith('.js')?'text/javascript':'application/json','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; object-src 'none'; frame-ancestors 'none'"});res.end(await readFile(root+file));
     }catch(error){send(400,{error:error.message});}
   });
-  server.on('close',()=>{auto.stop();fisherAuto.stop();inventoryAuto.stop();live.close();});
+  server.on('close',()=>{auto.stop();fisherAuto.stop();inventoryAuto.stop();legacyInventoryAuto.stop();live.close();});
   return server;
 }
 export function listenOptions(env = process.env) {

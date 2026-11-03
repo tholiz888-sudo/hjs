@@ -7,6 +7,7 @@ import {diagnostics} from './diagnostics.mjs';
 import {auditPortfolio} from './complete-set.mjs';
 import {inventoryConfig,replayInventory} from './inventory-paper.mjs';
 import {fetchSpot,currentBTCSlugs} from './inventory-model.mjs';
+import {querySettlement} from './settlement.mjs';
 const decode=x=>typeof x==='string'?JSON.parse(x):x;
 export async function discover(remote,now=Date.now()) {
   const found=[];
@@ -23,39 +24,41 @@ export async function discover(remote,now=Date.now()) {
   return [...new Set(found)].slice(0,8);
 }
 export async function resolution(remote,slug,now=Date.now()) {
-  const rows=await remote('https://gamma-api.polymarket.com/markets?slug='+encodeURIComponent(slug));
-  const m=Array.isArray(rows)&&rows.find(x=>x.slug===slug);
-  // Require explicit final resolution, not merely a closed order book or a price near $1.
-  if(!m || m.closed!==true || m.umaResolutionStatus!=='resolved' || Date.parse(m.endDate)>now)return null;
-  const outcomes=decode(m.outcomes),prices=decode(m.outcomePrices);
-  if(!Array.isArray(outcomes)||!Array.isArray(prices)||outcomes.length!==2||prices.length!==2)return null;
-  const index=prices.findIndex(p=>Number(p)===1);
-  if(index<0 || Number(prices[1-index])!==0)return null;
-  const winner=String(outcomes[index]).toLowerCase();
-  return ['up','down'].includes(winner)?winner:null;
+  const result=await querySettlement(remote,slug,now);return result.status==='resolved'?result.winner:null;
 }
 export class Automation {
-  constructor({file,remote,collect,now=()=>Date.now(),initialMode='paired'}) {
+  constructor({file,remote,collect,now=()=>Date.now(),initialMode='paired',initialInventoryVersion=2}) {
     Object.assign(this,{file,remote,collect,now});this.running=false;this.busy=false;this.timer=null;
-    this.state={config:initialMode==='inventory'?inventoryConfig():config(),mode:initialMode,candles:[],snapshots:[],markets:{},logs:[],lastRun:null};
+    this.state={config:initialMode==='inventory'?inventoryConfig({inventoryVersion:initialInventoryVersion}):config(),mode:initialMode,candles:[],snapshots:[],markets:{},logs:[],lastRun:null};
     this.ready=this.load();
   }
-  async load(){try{const s=JSON.parse(await readFile(this.file,'utf8'));if(s.mode==='inventory')replayInventory(s.snapshots,s.config);else if(s.mode==='fisher')replayFisher(s.snapshots,s.config,s.candles||[]);else replay(s.snapshots,s.config);this.state={mode:'paired',candles:[],...s};}catch(e){if(e.code!=='ENOENT')throw Error('自动记录读取失败，未覆盖原文件：'+e.message);}}
+  async load(){try{const s=JSON.parse(await readFile(this.file,'utf8'));if(s.mode==='inventory'&&s.config.inventoryVersion===undefined)s.config.inventoryVersion=1;if(s.mode==='inventory')replayInventory(s.snapshots,s.config);else if(s.mode==='fisher')replayFisher(s.snapshots,s.config,s.candles||[]);else replay(s.snapshots,s.config);this.state={mode:'paired',candles:[],...s};}catch(e){if(e.code!=='ENOENT')throw Error('自动记录读取失败，未覆盖原文件：'+e.message);}}
   log(message){this.state.logs.push({time:new Date(this.now()).toISOString(),message});this.state.logs=this.state.logs.slice(-100);}
   async save(){await mkdir(dirname(this.file),{recursive:true});await writeFile(this.file+'.tmp',JSON.stringify(this.state));await rename(this.file+'.tmp',this.file);}
   report(rows=this.state.snapshots){return this.state.mode==='inventory'?replayInventory(rows,this.state.config):this.state.mode==='fisher'?replayFisher(rows,this.state.config,this.state.candles):replay(rows,this.state.config);}
   async start(settings,mode=this.state.mode){await this.ready;if(!['paired','fisher','inventory'].includes(mode))throw Error('策略模式无效');if(this.state.snapshots.length&&mode!==this.state.mode)throw Error('已有记录不能切换策略，请使用独立数据目录');if(this.running||this.busy)throw Error('任务已运行或正在停止');if(this.state.snapshots.length && settings && JSON.stringify(config(settings))!==JSON.stringify(this.state.config))throw Error('已有记录不可更改资金与费率，请先导出并使用独立数据目录开启新实验');this.state.config=mode==='inventory'?inventoryConfig(settings||this.state.config):config(settings||this.state.config);this.state.mode=mode;this.running=true;this.log('启动持续模拟；无真实订单');try{await this.save();}catch(e){this.running=false;throw e;}this.tick();this.timer=setInterval(()=>this.tick(),mode==='inventory'?10000:30000);this.timer.unref();}
   stop(){this.running=false;clearInterval(this.timer);this.timer=null;}
   append(s){if(this.state.snapshots.some(x=>x.market===s.market&&x.time===s.time))return;const next=[...this.state.snapshots,s].sort((a,b)=>Date.parse(a.time)-Date.parse(b.time));this.report(next);this.state.snapshots=next;}
+  async pollSettlements(force=false){
+    const now=this.now(),held=new Map(this.report().positions.map(p=>[p.market,p.cost>0]));
+    const due=Object.entries(this.state.markets).filter(([,m])=>!m.settled&&Date.parse(m.end)<=now&&(force||!m.nextSettlementCheck||m.nextSettlementCheck<=now)).sort((a,b)=>Number(held.get(b[1].market)||false)-Number(held.get(a[1].market)||false)||(a[1].lastSettlementCheck||0)-(b[1].lastSettlementCheck||0));
+    let checked=0,resolved=0;
+    for(const [slug,m] of due.slice(0,4)){
+      checked++;m.lastSettlementCheck=this.now();m.settlementAttempts=(m.settlementAttempts||0)+1;
+      try{const result=await querySettlement(this.remote,slug,this.now(),m.market);m.settlementObservation=result;
+        if(result.status==='resolved'){const time=new Date(this.now()).toISOString();this.append({market:m.market,time,observedAt:time,end:m.end,up:[],down:[],winner:result.winner,settlementEvidence:result.evidence});m.settled=true;resolved++;this.log(slug+' 已确认结算 '+result.winner+'（'+result.evidence.field+'）');}
+        else this.log('等待结算 '+slug+'：'+result.reason);
+      }catch(error){m.settlementObservation={status:'unavailable',code:'REQUEST_FAILED',reason:error.message.slice(0,200),observedAt:new Date(this.now()).toISOString()};this.log('结算查询失败 '+slug+'：'+error.message.slice(0,200));}
+      m.nextSettlementCheck=this.now()+Math.min(300000,30000*2**Math.min(m.settlementAttempts-1,4));
+    }
+    return {checked,resolved,pending:checked-resolved,remainingDue:Math.max(0,due.length-checked)};
+  }
+  async checkSettlements(){await this.ready;if(this.busy)throw Error('正在采集，请稍后再检查结算');this.busy=true;try{const result=await this.pollSettlements(true);await this.save();return result;}finally{this.busy=false;}}
   async tick(){if(this.busy||!this.running)return;this.busy=true;
     try{
       const before=this.state.snapshots.length;
       if(this.state.snapshots.length>=4990){this.stop();throw Error('已达5000条安全上限，请导出记录；未删除任何历史仓位');}
-      for(const [slug,m] of Object.entries(this.state.markets)) {
-        if(!this.running)break;
-        if(m.settled||Date.parse(m.end)>this.now())continue;
-        try{const winner=await resolution(this.remote,slug,this.now());if(winner){const time=new Date(this.now()).toISOString();this.append({market:m.market,time,observedAt:time,end:m.end,up:[],down:[],winner});m.settled=true;this.log(slug+' 已确认结算 '+winner);}}catch(e){this.log('结算查询失败：'+e.message.slice(0,200));}
-      }
+      await this.pollSettlements();
       let spot=null;
       try{if(this.state.mode==='fisher'||this.state.mode==='inventory'){
         const feed=await fetchBTC(this.remote,this.now());
@@ -77,5 +80,5 @@ export class Automation {
     }catch(e){this.log(e.message.slice(0,400));}
     finally{try{await this.save();}catch(e){this.stop();this.log('保存失败，已停止：'+e.message);}this.busy=false;}
   }
-  async status(){await this.ready;const report=this.report();return {intervalSeconds:this.state.mode==='inventory'?10:30,completeSetFloor:auditPortfolio({cash:report.cash,capital:report.config.capital,positions:report.positions}),diagnostics:diagnostics(this.state,report,this.now()),mode:this.state.mode,priceHistory:this.state.candles.slice(-60),latestCandle:this.state.candles?.at(-1)||null,running:this.running,busy:this.busy,lastRun:this.state.lastRun,count:this.state.snapshots.length,logs:this.state.logs,report};}
+  async status(){await this.ready;const report=this.report();return {settlementChecks:Object.entries(this.state.markets).filter(([,m])=>!m.settled&&Date.parse(m.end)<=this.now()).map(([slug,m])=>({slug,market:m.market,end:m.end,lastCheck:m.lastSettlementCheck||null,nextCheck:m.nextSettlementCheck||null,observation:m.settlementObservation||null})),inventoryVersion:this.state.mode==='inventory'?(this.state.config.inventoryVersion??1):null,intervalSeconds:this.state.mode==='inventory'?10:30,completeSetFloor:auditPortfolio({cash:report.cash,capital:report.config.capital,positions:report.positions}),diagnostics:diagnostics(this.state,report,this.now()),mode:this.state.mode,priceHistory:this.state.candles.slice(-60),latestCandle:this.state.candles?.at(-1)||null,running:this.running,busy:this.busy,lastRun:this.state.lastRun,count:this.state.snapshots.length,logs:this.state.logs,report};}
 }
