@@ -7,5 +7,5 @@ export function diagnostics(state,report,now=Date.now()) {
   const latestDecision=report.events.at(-1)||null;
   const lastRunAgeSeconds=state.lastRun?Math.max(0,(now-Date.parse(state.lastRun))/1000):null;
   const candleAgeSeconds=latest?Math.max(0,(now-latest.time)/1000):null;
-  return {actions,skipReasons:reasons,latestSignal:latest,latestDecision,recentDecisions:report.events.slice(-8),lastSnapshotTime:snapshot?.observedAt||null,lastRunAgeSeconds,candleAgeSeconds,warning:state.mode==='fisher'&&candleAgeSeconds!==null&&candleAgeSeconds>180?'BTC行情已过期，请检查采集日志。':lastRunAgeSeconds!==null&&lastRunAgeSeconds>120?'超过两分钟未完成一轮采集，请检查错误日志及Render状态。':null};
+  return {inventoryModel:report.lastModel||null,actions,skipReasons:reasons,latestSignal:latest,latestDecision,recentDecisions:report.events.slice(-8),lastSnapshotTime:snapshot?.observedAt||null,lastRunAgeSeconds,candleAgeSeconds,warning:state.mode==='inventory'&&!report.lastModel?.ready?(report.lastModel?.reason||'库存模型等待数据，禁止新建方向仓位。'):state.mode==='fisher'&&candleAgeSeconds!==null&&candleAgeSeconds>180?'BTC行情已过期，请检查采集日志。':lastRunAgeSeconds!==null&&lastRunAgeSeconds>120?'超过两分钟未完成一轮采集，请检查错误日志及Render状态。':null};
 }

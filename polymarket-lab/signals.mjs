@@ -15,7 +15,9 @@ export function signals(candles,{period=10,threshold=1.5}={}) {
   });
 }
 export async function fetchBTC(remote,now=Date.now()) {
-  const raw=await remote('https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=60');
+  const end=Math.floor(now/60000)*60000;
+  const range=new URLSearchParams({granularity:'60',start:new Date(end-299*60000).toISOString(),end:new Date(end).toISOString()});
+  const raw=await remote('https://api.exchange.coinbase.com/products/BTC-USD/candles?'+range);
   if(!Array.isArray(raw))throw Error('BTC行情格式异常');
   const candles=raw.map(r=>({time:(Number(r[0])+60)*1000,close:Number(r[4])})).filter(c=>c.time<=now).sort((a,b)=>a.time-b.time);
   validateCandles(candles);

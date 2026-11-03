@@ -5,6 +5,8 @@ import {fetchBTC} from './signals.mjs';
 import {replayFisher} from './fisher-paper.mjs';
 import {diagnostics} from './diagnostics.mjs';
 import {auditPortfolio} from './complete-set.mjs';
+import {inventoryConfig,replayInventory} from './inventory-paper.mjs';
+import {fetchSpot,currentBTCSlugs} from './inventory-model.mjs';
 const decode=x=>typeof x==='string'?JSON.parse(x):x;
 export async function discover(remote,now=Date.now()) {
   const found=[];
@@ -35,14 +37,14 @@ export async function resolution(remote,slug,now=Date.now()) {
 export class Automation {
   constructor({file,remote,collect,now=()=>Date.now(),initialMode='paired'}) {
     Object.assign(this,{file,remote,collect,now});this.running=false;this.busy=false;this.timer=null;
-    this.state={config:config(),mode:initialMode,candles:[],snapshots:[],markets:{},logs:[],lastRun:null};
+    this.state={config:initialMode==='inventory'?inventoryConfig():config(),mode:initialMode,candles:[],snapshots:[],markets:{},logs:[],lastRun:null};
     this.ready=this.load();
   }
-  async load(){try{const s=JSON.parse(await readFile(this.file,'utf8'));if(s.mode==='fisher')replayFisher(s.snapshots,s.config,s.candles||[]);else replay(s.snapshots,s.config);this.state={mode:'paired',candles:[],...s};}catch(e){if(e.code!=='ENOENT')throw Error('自动记录读取失败，未覆盖原文件：'+e.message);}}
+  async load(){try{const s=JSON.parse(await readFile(this.file,'utf8'));if(s.mode==='inventory')replayInventory(s.snapshots,s.config);else if(s.mode==='fisher')replayFisher(s.snapshots,s.config,s.candles||[]);else replay(s.snapshots,s.config);this.state={mode:'paired',candles:[],...s};}catch(e){if(e.code!=='ENOENT')throw Error('自动记录读取失败，未覆盖原文件：'+e.message);}}
   log(message){this.state.logs.push({time:new Date(this.now()).toISOString(),message});this.state.logs=this.state.logs.slice(-100);}
   async save(){await mkdir(dirname(this.file),{recursive:true});await writeFile(this.file+'.tmp',JSON.stringify(this.state));await rename(this.file+'.tmp',this.file);}
-  report(rows=this.state.snapshots){return this.state.mode==='fisher'?replayFisher(rows,this.state.config,this.state.candles):replay(rows,this.state.config);}
-  async start(settings,mode=this.state.mode){await this.ready;if(!['paired','fisher'].includes(mode))throw Error('策略模式无效');if(this.state.snapshots.length&&mode!==this.state.mode)throw Error('已有记录不能切换策略，请使用独立数据目录');if(this.running||this.busy)throw Error('任务已运行或正在停止');if(this.state.snapshots.length && settings && JSON.stringify(config(settings))!==JSON.stringify(this.state.config))throw Error('已有记录不可更改资金与费率，请先导出并使用独立数据目录开启新实验');this.state.config=config(settings||this.state.config);this.state.mode=mode;this.running=true;this.log('启动持续模拟；无真实订单');try{await this.save();}catch(e){this.running=false;throw e;}this.tick();this.timer=setInterval(()=>this.tick(),30000);this.timer.unref();}
+  report(rows=this.state.snapshots){return this.state.mode==='inventory'?replayInventory(rows,this.state.config):this.state.mode==='fisher'?replayFisher(rows,this.state.config,this.state.candles):replay(rows,this.state.config);}
+  async start(settings,mode=this.state.mode){await this.ready;if(!['paired','fisher','inventory'].includes(mode))throw Error('策略模式无效');if(this.state.snapshots.length&&mode!==this.state.mode)throw Error('已有记录不能切换策略，请使用独立数据目录');if(this.running||this.busy)throw Error('任务已运行或正在停止');if(this.state.snapshots.length && settings && JSON.stringify(config(settings))!==JSON.stringify(this.state.config))throw Error('已有记录不可更改资金与费率，请先导出并使用独立数据目录开启新实验');this.state.config=mode==='inventory'?inventoryConfig(settings||this.state.config):config(settings||this.state.config);this.state.mode=mode;this.running=true;this.log('启动持续模拟；无真实订单');try{await this.save();}catch(e){this.running=false;throw e;}this.tick();this.timer=setInterval(()=>this.tick(),mode==='inventory'?10000:30000);this.timer.unref();}
   stop(){this.running=false;clearInterval(this.timer);this.timer=null;}
   append(s){if(this.state.snapshots.some(x=>x.market===s.market&&x.time===s.time))return;const next=[...this.state.snapshots,s].sort((a,b)=>Date.parse(a.time)-Date.parse(b.time));this.report(next);this.state.snapshots=next;}
   async tick(){if(this.busy||!this.running)return;this.busy=true;
@@ -54,7 +56,8 @@ export class Automation {
         if(m.settled||Date.parse(m.end)>this.now())continue;
         try{const winner=await resolution(this.remote,slug,this.now());if(winner){const time=new Date(this.now()).toISOString();this.append({market:m.market,time,observedAt:time,end:m.end,up:[],down:[],winner});m.settled=true;this.log(slug+' 已确认结算 '+winner);}}catch(e){this.log('结算查询失败：'+e.message.slice(0,200));}
       }
-      if(this.state.mode==='fisher'){
+      let spot=null;
+      try{if(this.state.mode==='fisher'||this.state.mode==='inventory'){
         const feed=await fetchBTC(this.remote,this.now());
         const merged=new Map(this.state.candles.map(c=>[c.time,c]));
         // Keep historical prefix immutable: late backfilled candles must not rewrite earlier paper decisions.
@@ -62,15 +65,17 @@ export class Automation {
         for(const candle of feed.candles)if(candle.time>lastStored)merged.set(candle.time,candle);
         if(merged.size>20000){this.stop();throw Error('BTC蜡烛存储达到上限，已停止并保留记录');}
         this.state.candles=[...merged.values()].sort((a,b)=>a.time-b.time);
-      }
-      let slugs=await discover(this.remote,this.now());
+        if(this.state.mode==='inventory')spot=await fetchSpot(this.remote,this.now());
+      }}catch(error){if(this.state.mode!=='inventory')throw error;this.log('建仓行情不可用，仅尝试已有库存管理：'+error.message);}
+      let slugs=this.state.mode==='inventory'?currentBTCSlugs(this.now()):await discover(this.remote,this.now());
       if(this.state.mode==='fisher')slugs=slugs.filter(slug=>slug.startsWith('btc-')&&Number(slug.split('-').at(-1))*1000<=this.now());
       if(!slugs.length)this.log('本次有限范围扫描未发现匹配市场；不表示全平台无机会');
-      for(const slug of slugs){if(!this.running)break;try{const result=await this.collect(slug);this.append(result.snapshot);this.state.markets[slug]={...this.state.markets[slug],market:result.snapshot.market,end:result.snapshot.end};}catch(e){this.log('采集失败 '+slug+'：'+e.message.slice(0,200));}}
+      for(const slug of slugs){if(!this.running)break;try{const result=await this.collect(slug);if(this.state.mode==='inventory'){const start=Number(slug.split('-').at(-1))*1000;const anchor=this.state.candles.find(c=>c.time===start);result.snapshot.underlying=spot&&anchor?{spot:spot.price,spotTime:spot.time,reference:anchor.close,referenceTime:anchor.time,referenceSource:'coinbase-minute-proxy',candles:this.state.candles.slice(-32)}:null;}
+        this.append(result.snapshot);this.state.markets[slug]={...this.state.markets[slug],market:result.snapshot.market,end:result.snapshot.end};}catch(e){this.log('采集失败 '+slug+'：'+e.message.slice(0,200));}}
       if(this.state.snapshots.length>before){const result=this.report();const event=result.events.at(-1);this.log(`本轮新增${this.state.snapshots.length-before}条；最近判断：${event?.action||'暂无'} · ${event?.detail||'暂无'}`);}
       this.state.lastRun=new Date(this.now()).toISOString();
     }catch(e){this.log(e.message.slice(0,400));}
     finally{try{await this.save();}catch(e){this.stop();this.log('保存失败，已停止：'+e.message);}this.busy=false;}
   }
-  async status(){await this.ready;const report=this.report();return {completeSetFloor:auditPortfolio({cash:report.cash,capital:report.config.capital,positions:report.positions}),diagnostics:diagnostics(this.state,report,this.now()),mode:this.state.mode,latestCandle:this.state.candles?.at(-1)||null,running:this.running,busy:this.busy,lastRun:this.state.lastRun,count:this.state.snapshots.length,logs:this.state.logs,report};}
+  async status(){await this.ready;const report=this.report();return {intervalSeconds:this.state.mode==='inventory'?10:30,completeSetFloor:auditPortfolio({cash:report.cash,capital:report.config.capital,positions:report.positions}),diagnostics:diagnostics(this.state,report,this.now()),mode:this.state.mode,priceHistory:this.state.candles.slice(-60),latestCandle:this.state.candles?.at(-1)||null,running:this.running,busy:this.busy,lastRun:this.state.lastRun,count:this.state.snapshots.length,logs:this.state.logs,report};}
 }
