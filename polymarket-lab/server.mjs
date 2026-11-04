@@ -9,9 +9,11 @@ import { Automation } from './automation.mjs';
 import { readFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import {gzip} from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { replay } from './engine.mjs';
 import {replayInventory} from './inventory-paper.mjs';
+const gzipAsync=promisify(gzip);
 const exec = promisify(execFile), root = fileURLToPath(new URL('./public/',import.meta.url));
 export async function remote(url) {
   const {stdout} = await exec('curl',['--fail-with-body','--silent','--show-error','--max-time','15','--proto','=https',url],{maxBuffer:2*1024*1024});
@@ -82,9 +84,10 @@ export function createServer(options = {}) {
         const expected=process.env.LAB_ADMIN_TOKEN;
         const supplied=req.headers.authorization?.replace(/^Bearer /,'') || '';
         if(!expected || Buffer.byteLength(expected)!==Buffer.byteLength(supplied) || !timingSafeEqual(Buffer.from(expected),Buffer.from(supplied))) return send(401,{error:'请在 Render Environment 设置 LAB_ADMIN_TOKEN，再在页面输入同一管理口令；不是钱包密钥。'});
-        if(req.method==='GET' && url.pathname==='/api/auto/export') {await selected.ready;return send(200,selected.state);}
+        if(req.method==='GET' && url.pathname==='/api/auto/export') {await selected.ready;if(url.searchParams.get('format')==='gzip'){const bytes=await gzipAsync(JSON.stringify(selected.state));res.writeHead(200,{'Content-Type':'application/gzip','Content-Disposition':'attachment; filename=auto-paper-records.json.gz','Cache-Control':'no-store'});return res.end(bytes);}return send(200,selected.state);}
         if(req.method==='POST' && url.pathname==='/api/auto/start') {await selected.start(undefined,mode==='inventory-v1'?'inventory':mode);return send(200,{running:true});}
         if(req.method==='POST' && url.pathname==='/api/auto/check-settlements')return send(200,await selected.checkSettlements());
+        if(req.method==='POST' && url.pathname==='/api/auto/new-experiment'){let body='';for await(const chunk of req){body+=chunk;if(Buffer.byteLength(body)>2048)return send(413,{error:'请求过大'});}const request=body?JSON.parse(body):{};return send(200,await selected.newExperiment(request.confirmation));}
         if(req.method==='POST' && url.pathname==='/api/auto/stop') {selected.stop();return send(200,{running:false});}
         return send(404,{error:'未找到'});
       }

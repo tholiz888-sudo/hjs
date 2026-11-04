@@ -133,3 +133,5 @@ BTC行情来自固定官方公开端点 `api.exchange.coinbase.com/products/BTC-
 ### 兼容旧Render构建命令
 
 若已有Render服务仍使用 `npm test`，pretest会检查锁定的直接依赖版本及SDK可载入性；缺失或损坏时先执行 `npm ci`，安装失败则中止构建，不跳过测试。推荐新服务仍使用 `npm ci && npm test`。已在没有node_modules的干净副本中验证仅执行npm test可完成安装及完整测试，无需通过删除实盘测试绕过依赖问题。
+
+研究版05修复到期市场查询与采集上限：4,990条后仅核对已有持仓结算，未确认结果继续保留。导出默认压缩为 `.json.gz`；停止且无未结算风险时才能确认归档并建立新模拟账户。详见 [INVENTORY_STRATEGY.md](INVENTORY_STRATEGY.md)。Render未挂持久磁盘时，部署前先导出备份。

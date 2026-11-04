@@ -16,7 +16,9 @@ export function settlementFromMarket(m,{slug,conditionId,now=Date.now()}){
   return {status:'resolved',winner:outcomes[index].toLowerCase(),source:'Gamma',observedAt:new Date(now).toISOString(),evidence:{slug,conditionId:m.conditionId||null,version,field,value:m[field],closed:true,endDate:m.endDate,outcomes,prices:values}};
 }
 export async function querySettlement(remote,slug,now=Date.now(),conditionId){
-  const rows=await remote('https://gamma-api.polymarket.com/markets?slug='+encodeURIComponent(slug));
-  if(!Array.isArray(rows))throw Error('Gamma结算响应不是市场数组');
-  return settlementFromMarket(rows.find(m=>m.slug===slug),{slug,conditionId,now});
+  if(typeof slug!=='string'||!/^[a-z0-9-]{1,180}$/.test(slug))throw Error('结算slug格式无效');
+  // Official ts-sdk fetchMarketBySlug uses the direct detail route, not the market-list filter.
+  const market=await remote('https://gamma-api.polymarket.com/markets/slug/'+encodeURIComponent(slug));
+  if(!market||typeof market!=='object'||Array.isArray(market))throw Error('Gamma市场详情响应格式异常，未推测赢家');
+  return {...settlementFromMarket(market,{slug,conditionId,now}),lookup:'market-detail-v1'};
 }
