@@ -1,0 +1,28 @@
+'use client';
+import { ChevronDown, SlidersHorizontal, ArrowUpRight, ArrowDownRight, Wallet, Crosshair } from 'lucide-react';
+import { type Plan } from '@/lib/types';
+import { Button } from '@/components/ui/button';
+export function Field({label,value,onChange,suffix,hint,step='any'}:{label:string;value:string;onChange:(v:string)=>void;suffix?:string;hint?:string;step?:string}){
+ return <label className="field"><span>{label}</span><div className="input-shell"><input aria-label={label} type="text" inputMode={step==='1'?'numeric':'decimal'} autoComplete="off" value={value} onChange={e=>onChange(e.target.value)} spellCheck={false}/>{suffix&&<span className="input-unit">{suffix}</span>}</div>{hint&&<small>{hint}</small>}</label>;
+}
+export function Inputs({plan:p,onChange:set}:{plan:Plan;onChange:(p:Plan)=>void}) {
+ const update=(key:keyof Plan,value:string)=>set({...p,[key]:value});
+ const chooseSymbol=(symbol:string)=>set({...p,symbol,...(symbol==='BTCUSDT'?{entry:'100200',stop:p.direction==='long'?'99600':'100800',priceDecimals:'2',priceStep:'0.1',quantityStep:'0.000001',minQuantity:'0.000001'}:symbol==='ETHUSDT'?{entry:'3500',stop:p.direction==='long'?'3450':'3550',priceDecimals:'2',priceStep:'0.01',quantityStep:'0.001',minQuantity:'0.001'}:{})});
+ return <section className="panel input-panel"><div className="panel-heading"><span className="section-icon"><SlidersHorizontal size={17}/></span><h2>交易参数</h2><span className="tag">USDT 本位</span></div>
+ <div className="input-body"><div className="direction-switch" aria-label="交易方向"><button type="button" aria-pressed={p.direction==='long'} className={p.direction==='long'?'active-long':''} onClick={()=>set({...p,direction:'long'})}><ArrowUpRight size={16}/>做多 <span>Long</span></button><button type="button" aria-pressed={p.direction==='short'} className={p.direction==='short'?'active-short':''} onClick={()=>set({...p,direction:'short'})}><ArrowDownRight size={16}/>做空 <span>Short</span></button></div>
+ <label className="field"><span>交易标的</span><div className="symbol-select"><span className={p.symbol==='ETHUSDT'?'coin eth':'coin'}>{p.symbol==='BTCUSDT'?'₿':p.symbol==='ETHUSDT'?'Ξ':'◆'}</span><select aria-label="交易标的" value={p.symbol} onChange={e=>chooseSymbol(e.target.value)}><option value="BTCUSDT">BTC / USDT</option><option value="ETHUSDT">ETH / USDT</option><option value="CUSTOM">自定义标的</option></select><span className="perp">永续</span><ChevronDown size={14}/></div></label>
+ {p.symbol==='CUSTOM'&&<Field label="自定义标的" value={p.customSymbol} onChange={v=>update('customSymbol',v)} hint="例如 SOLUSDT；不连接交易所"/>}
+ <div className="field-section"><Wallet size={14}/><span>资金与风险</span><span className="section-line"/></div>
+ <Field label="账户权益" value={p.equity} onChange={v=>update('equity',v)} suffix="USDT"/>
+ <Field label="单笔风险比例" value={p.risk} onChange={v=>update('risk',v)} suffix="%"/>
+ <div className="presets">{['0.25','0.5','0.75','1'].map(v=><button key={v} className={p.risk===v?'selected':''} onClick={()=>update('risk',v)}>{v}%</button>)}</div>
+ <div className="field-section"><Crosshair size={14}/><span>价格与杠杆</span><span className="section-line"/></div>
+ <div className="two-fields"><Field label="入场价格" value={p.entry} onChange={v=>update('entry',v)} suffix="USDT"/><Field label="止损价格" value={p.stop} onChange={v=>update('stop',v)} suffix="USDT"/></div>
+ <Field label="杠杆倍数" value={p.leverage} onChange={v=>update('leverage',v)} suffix="×"/>
+ <div className="presets leverage">{['1','2','3','5','10','20'].map(v=><button key={v} className={p.leverage===v?'selected':''} onClick={()=>update('leverage',v)}>{v}×</button>)}</div>
+ <p className="field-note">杠杆只改变保证金，不改变风险预算下的仓位。</p>
+ <details className="settings" open><summary><SlidersHorizontal size={14}/>交易成本 <span>可编辑估算</span><ChevronDown size={14}/></summary><div className="settings-body"><div className="two-fields"><Field label="开仓手续费率" value={p.openFee} onChange={v=>update('openFee',v)} suffix="%"/><Field label="平仓手续费率" value={p.closeFee} onChange={v=>update('closeFee',v)} suffix="%"/><Field label="往返滑点合计" value={p.slippage} onChange={v=>update('slippage',v)} suffix="%"/><Field label="持仓期资金费成本" value={p.funding} onChange={v=>update('funding',v)} suffix="%"/></div><p>示例费率并非实时费率。滑点与资金费均按入场名义价值计一次，资金费仅按成本估算，不计返还。</p></div></details>
+ <details className="settings"><summary><SlidersHorizontal size={14}/>数量与价格规则 <span>手动配置</span><ChevronDown size={14}/></summary><div className="settings-body"><div className="two-fields"><Field label="风险比例上限" value={p.maxRisk} onChange={v=>update('maxRisk',v)} suffix="%"/><Field label="价格显示小数位" value={p.priceDecimals} onChange={v=>update('priceDecimals',v)} step="1"/><Field label="价格步长" value={p.priceStep} onChange={v=>update('priceStep',v)}/><Field label="数量步长" value={p.quantityStep} onChange={v=>update('quantityStep',v)}/><Field label="最小数量" value={p.minQuantity} onChange={v=>update('minQuantity',v)}/></div><p>均为可编辑示例，未核验实时交易所限制。数量向下取整，价格不会自动改写。</p></div></details>
+ <Button variant="ghost" className="reset-button" onClick={()=>set({...p,equity:'5000',risk:'0.5',leverage:'5',openFee:'0.04',closeFee:'0.04',slippage:'0.02',funding:'0'})}>恢复资金与成本默认值</Button>
+ </div></section>;
+}
