@@ -18,6 +18,23 @@ try {
  assert.match(await page.getByTestId('margin').innerText(),/^200.00/);
  await page.getByLabel('止损价格',{exact:true}).fill('99000');
  assert.match(await page.getByTestId('quantity').innerText(),/0.1/);
+ assert.match(await page.getByTestId('stop-price').innerText(),/99,000.00/);
+ await page.getByRole('button',{name:'按保证金算止损价',exact:true}).click();
+ await page.getByLabel('投入保证金',{exact:true}).fill('100');
+ assert.match(await page.getByTestId('stop-price').innerText(),/99,000.00/);
+ await page.getByLabel('投入保证金',{exact:true}).fill('200');
+ assert.match(await page.getByTestId('stop-price').innerText(),/99,500.00/);
+ await page.getByRole('button',{name:'做空 Short',exact:true}).click();
+ assert.match(await page.getByTestId('stop-price').innerText(),/100,500.00/);
+ await page.getByRole('button',{name:'做多 Long',exact:true}).click();
+ await page.getByRole('button',{name:'保存计划',exact:true}).click();
+ await page.reload();await page.waitForTimeout(400);
+ assert.equal(await page.getByLabel('投入保证金',{exact:true}).inputValue(),'200');
+ assert.match(await page.getByTestId('stop-price').innerText(),/99,500.00/);
+ await page.getByRole('button',{name:'已保存计划',exact:true}).click();
+ await page.getByRole('dialog').getByRole('button',{name:'删除 BTCUSDT 计划'}).click();
+ await page.getByRole('button',{name:'关闭已保存计划'}).click();
+ await page.getByRole('button',{name:'按止损算保证金',exact:true}).click();
  await page.screenshot({path:'/tmp/position-desktop.png',fullPage:true});
  const original=await page.getByTestId('quantity').innerText();
  await page.getByLabel('计划最多亏损',{exact:true}).fill('200');
@@ -74,5 +91,5 @@ try {
  await page.getByLabel('入场价格',{exact:true}).fill('abc');await page.locator('.validation-panel').waitFor();
  assert.equal(await page.getByTestId('quantity').count(),0);
  assert.deepEqual(errors,[]);
- console.log('PASS: direct-loss 100x margin examples, amount/percent switching, amount persistence, desktop/mobile layout (375–1440px), live risk/leverage updates, invalid inputs, ETH short, TP shares, clipboard, save/load/delete, preference/theme persistence; no runtime errors.');
+ console.log('PASS: inverse stop-price long/short and persistence, direct-loss 100x margin examples, amount/percent switching, amount persistence, desktop/mobile layout (375–1440px), live risk/leverage updates, invalid inputs, ETH short, TP shares, clipboard, save/load/delete, preference/theme persistence; no runtime errors.');
 } finally {await browser.close();}

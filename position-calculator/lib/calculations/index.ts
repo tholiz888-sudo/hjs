@@ -4,7 +4,7 @@ export const D = Decimal.clone({ precision: 120, rounding: Decimal.ROUND_HALF_UP
 export type Num = Decimal;
 export type Costs = { price: Num; opening: Num; closing: Num; slippage: Num; funding: Num; total: Num };
 export type TargetResult = { price: Num; share: Num; quantity: Num; gross: Num; net: Num; roi: Num; grossR: Num; netR: Num; batchNet: Num };
-export type Result = { budget: Num; distance: Num; distancePercent: Num; quantity: Num; recommended: Num; notional: Num; margin: Num; loss: Num; costs: Costs; breakEven: Num; targets: TargetResult[]; totalNet: Num; weightedGrossR: Num; weightedNetR: Num; partialStop: Num; warnings: string[]; feasible: boolean };
+export type Result = { stop: Num; budget: Num; distance: Num; distancePercent: Num; quantity: Num; recommended: Num; notional: Num; margin: Num; loss: Num; costs: Costs; breakEven: Num; targets: TargetResult[]; totalNet: Num; weightedGrossR: Num; weightedNetR: Num; partialStop: Num; warnings: string[]; feasible: boolean };
 export type Calculation = { ok: true; result: Result } | { ok: false; errors: string[] };
 const labels: Record<string,string> = {equity:'账户权益',risk:'风险比例',maxRisk:'风险上限',entry:'入场价格',stop:'止损价格',leverage:'杠杆倍数',openFee:'开仓费率',closeFee:'平仓费率',slippage:'滑点比例',funding:'资金费成本',priceStep:'价格步长',quantityStep:'数量步长',minQuantity:'最小数量',priceDecimals:'价格显示精度'};
 const numeric = (v: unknown): v is string => typeof v === 'string' && v.length <= 80 && /^(?:\d+(?:\.\d*)?|\.\d+)$/.test(v);
@@ -14,11 +14,12 @@ const numeric = (v: unknown): v is string => typeof v === 'string' && v.length <
 export function calculate(p: Plan): Calculation {
   const errors: string[] = [];
   if(!['amount','percent'].includes(p.riskMode)) return {ok:false,errors:['请选择有效的风险输入方式']};
-  const fields = Object.keys(labels).filter(k=>p.riskMode==='percent'||!['risk','maxRisk'].includes(k)) as (keyof Plan)[];
+  if(!['margin','stop'].includes(p.solveMode)) return {ok:false,errors:['请选择计算方式']};
+  const fields = Object.keys(labels).filter(k=>(p.riskMode==='percent'||!['risk','maxRisk'].includes(k))&&(p.solveMode!=='stop'||k!=='stop')) as (keyof Plan)[];
   for (const key of fields) if (!numeric(p[key])) errors.push(`${labels[key]}请输入有效数字`);
   if (errors.length) return {ok:false,errors};
   const n = Object.fromEntries(fields.map(k => [k,new D(p[k] as string)])) as Record<string,Num>;
-  for(const k of ['equity',...(p.riskMode==='percent'?['risk','maxRisk']:[]),'entry','stop','leverage','priceStep','quantityStep','minQuantity']) if(n[k].lte(0)) errors.push(`${labels[k]}必须大于 0`);
+  for(const k of ['equity',...(p.riskMode==='percent'?['risk','maxRisk']:[]),'entry',...(p.solveMode==='margin'?['stop']:[]),'leverage','priceStep','quantityStep','minQuantity']) if(n[k].lte(0)) errors.push(`${labels[k]}必须大于 0`);
   if(p.riskMode==='amount'&&(!numeric(p.maxLoss)||new D(p.maxLoss).lte(0))) errors.push('计划最多亏损请输入大于 0 的有效金额');
   if(p.riskMode==='percent'&&(n.maxRisk.gt(100)||n.risk.gt(n.maxRisk))) errors.push('风险比例不能超过所设上限，上限最大为 100%');
   if(n.leverage.lt(1)||n.leverage.gt(200)) errors.push('杠杆须在 1–200 倍之间');
@@ -26,7 +27,22 @@ export function calculate(p: Plan): Calculation {
   for(const k of ['openFee','closeFee','slippage','funding']) if(n[k].gt(10)) errors.push(`${labels[k]}须在 0–10% 之间`);
   if(!['long','short'].includes(p.direction)) errors.push('交易方向无效');
   if(!['BTCUSDT','ETHUSDT','CUSTOM'].includes(p.symbol) || (p.symbol==='CUSTOM'&&!/^[A-Za-z0-9._/-]{2,30}$/.test(p.customSymbol))) errors.push('请输入有效的交易标的');
+  if(p.solveMode==='stop'&&(!numeric(p.marginInput)||new D(p.marginInput).lte(0))) errors.push('投入保证金请输入大于 0 的有效金额');
+  if(errors.length)return {ok:false,errors};
+  const budget=p.riskMode==='amount'?new D(p.maxLoss):n.equity.mul(n.risk).div(100);
+  if(budget.gt(n.equity)) return {ok:false,errors:['计划最多亏损不能超过账户权益']};
+  let fixedQuantity: Num | null=null;
   const sign = p.direction === 'long' ? new D(1) : new D(-1);
+  if(p.solveMode==='stop') {
+    if(n.priceStep.decimalPlaces()>n.priceDecimals.toNumber())return {ok:false,errors:['反算止损需要足够价格显示精度，请提高小数位以展示价格步长']};
+    fixedQuantity=new D(p.marginInput).mul(n.leverage).divToInt(n.entry.mul(n.quantityStep)).mul(n.quantityStep);
+    if(fixedQuantity.lte(0)||fixedQuantity.lt(n.minQuantity))return {ok:false,errors:['投入保证金对应的数量低于最小数量，无法反算止损价']};
+    const allEntryRates=n.openFee.plus(n.slippage).plus(n.funding).div(100);
+    const rawStop=n.entry.mul(sign.plus(allEntryRates)).minus(budget.div(fixedQuantity)).div(sign.minus(n.closeFee.div(100)));
+    if(rawStop.lte(0))return {ok:false,errors:['此预算对应的止损价不大于 0，请调整亏损金额或保证金']};
+    n.stop=rawStop.div(n.priceStep).toDecimalPlaces(0,p.direction==='long'?D.ROUND_CEIL:D.ROUND_FLOOR).mul(n.priceStep);
+    if(n.entry.minus(n.stop).mul(sign).lte(0))return {ok:false,errors:['费用已占满亏损预算，或价格步长下没有有效止损空间，请调整保证金、预算或费用']};
+  }
   const distance = n.entry.minus(n.stop).mul(sign);
   if(distance.lte(0)) errors.push(p.direction==='long'?'做多止损必须低于入场价':'做空止损必须高于入场价');
   const targetValues: Num[] = [], shares: Num[] = [];
@@ -43,12 +59,10 @@ export function calculate(p: Plan): Calculation {
   if(targetValues.length===2&&targetValues[1].minus(targetValues[0]).mul(sign).lte(0)) errors.push('TP2 必须比 TP1 距入场价更远');
   if(errors.length) return {ok:false,errors};
   const openRate = n.openFee.div(100), closeRate=n.closeFee.div(100), slipRate=n.slippage.div(100), fundRate=n.funding.div(100);
-  const budget=p.riskMode==='amount'?new D(p.maxLoss):n.equity.mul(n.risk).div(100);
-  if(budget.gt(n.equity)) return {ok:false,errors:['计划最多亏损不能超过账户权益']};
   const unitLoss=distance.plus(n.entry.mul(openRate.plus(slipRate).plus(fundRate))).plus(n.stop.mul(closeRate));
-  const recommended=budget.div(unitLoss);
+  const recommended=p.solveMode==='stop'?new D(p.marginInput).mul(n.leverage).div(n.entry):budget.div(unitLoss);
   // Floor the ratio directly, avoiding double rounding at quantity-step boundaries.
-  const quantity=budget.divToInt(unitLoss.mul(n.quantityStep)).mul(n.quantityStep);
+  const quantity=fixedQuantity??budget.divToInt(unitLoss.mul(n.quantityStep)).mul(n.quantityStep);
   const notional=quantity.mul(n.entry), margin=notional.div(n.leverage);
   const priceLoss=quantity.mul(distance), opening=notional.mul(openRate), closing=quantity.mul(n.stop).mul(closeRate), slippage=notional.mul(slipRate), funding=notional.mul(fundRate);
   const costs={price:priceLoss,opening,closing,slippage,funding,total:opening.plus(closing).plus(slippage).plus(funding)};
@@ -73,7 +87,7 @@ export function calculate(p: Plan): Calculation {
   if(!n.entry.mod(n.priceStep).eq(0)||!n.stop.mod(n.priceStep).eq(0)||targetValues.some(t=>!t.mod(n.priceStep).eq(0))) warnings.push('部分价格不符合配置的价格步长，请调整后再使用');
   if(targets.some(t=>!t.quantity.mod(n.quantityStep).eq(0))) warnings.push('分批数量未全部对齐数量步长，需按实际交易规则调整分批方案');
   if(targets.some(t=>t.quantity.gt(0)&&t.quantity.lt(n.minQuantity))) warnings.push('分批数量低于最小数量，需调整分批方案');
-  return {ok:true,result:{budget,distance,distancePercent:distance.div(n.entry).mul(100),quantity,recommended,notional,margin,loss,costs,breakEven,targets,totalNet,weightedGrossR,weightedNetR,partialStop,warnings,feasible:warnings.length===0}};
+  return {ok:true,result:{stop:n.stop,budget,distance,distancePercent:distance.div(n.entry).mul(100),quantity,recommended,notional,margin,loss,costs,breakEven,targets,totalNet,weightedGrossR,weightedNetR,partialStop,warnings,feasible:warnings.length===0}};
 }
 export function netAtPrice(p: Plan,r:Result,price: Decimal.Value): Num {
   const exit = new D(price), sign=p.direction==='long'?1:-1;

@@ -63,3 +63,31 @@ test('old preferences and saved plans migrate without changing their loss budget
  const {riskMode,maxLoss,...old}=plan();void riskMode;void maxLoss;
  const migrated=parsePlan(old);assert.ok(migrated);assert.equal(migrated.riskMode,'amount');assert.equal(migrated.maxLoss,'25');assert.equal(migrated.leverage,'5');assert.ok(result(migrated).quantity.eq(result(plan()).quantity));assert.equal(parsePlan({...old,equity:'bad'}),null);
 });
+
+test('inverse stop calculation: 100 USDT budget, 100x, fixed margin determines long and short stop',()=>{
+ const p=plan({solveMode:'stop',marginInput:'100',riskMode:'amount',maxLoss:'100',entry:'100000',stop:'',leverage:'100',openFee:'0',closeFee:'0',slippage:'0',funding:'0'});
+ const long=result(p),short=result({...p,direction:'short'});
+ assert.ok(long.stop.eq(99000));assert.ok(short.stop.eq(101000));assert.ok(long.margin.eq(100));assert.ok(short.margin.eq(100));assert.ok(long.loss.eq(100));assert.ok(short.loss.eq(100));
+ const rounded=result({...p,marginInput:'123.456789'});assert.ok(rounded.recommended.gt(rounded.quantity));assert.ok(rounded.margin.lte('123.456789'));
+ const larger=result({...p,marginInput:'200'});assert.ok(larger.stop.eq(99500));assert.ok(larger.margin.eq(200));assert.ok(larger.loss.eq(100));
+ assert.ok(planText(p,long).includes('止损价格：99000.00'));
+});
+test('inverse stop includes costs and rounds toward entry to stay within risk budget',()=>{
+ for(const direction of ['long','short'] as const){
+  const p=plan({solveMode:'stop',marginInput:'123.45',riskMode:'amount',maxLoss:'100',entry:'100000',stop:'',leverage:'100',direction,priceStep:'0.1'}),r=result(p);
+  assert.ok(r.loss.lte(100));assert.ok(r.margin.lte('123.45'));assert.ok(r.stop.mod('.1').eq(0));
+  const next=r.stop.plus(direction==='long'?'-.1':'.1');assert.ok(netAtPrice(p,r,next).neg().gt(100));
+  assert.ok(netAtPrice(p,r,r.stop).neg().eq(r.loss));
+ }
+});
+test('inverse mode rejects missing margin, unaffordable costs, invalid stops and insufficient precision',()=>{
+ const p=plan({solveMode:'stop',riskMode:'amount',maxLoss:'100',entry:'100000',leverage:'100'});
+ for(const marginInput of ['','0','-1','abc','Infinity','0.0000000001'])assert.equal(calculate({...p,marginInput}).ok,false);
+ assert.equal(calculate({...p,marginInput:'100',maxLoss:'.001'}).ok,false);
+ assert.equal(calculate({...p,marginInput:'100',priceStep:'.001',priceDecimals:'2'}).ok,false);
+ assert.equal(calculate({...p,marginInput:'1',maxLoss:'200'}).ok,false);
+});
+test('pre-inverse saved plans migrate into margin mode without altering risk amount',()=>{
+ const {solveMode,marginInput,...old}=plan({riskMode:'amount',maxLoss:'77'});void solveMode;void marginInput;
+ const migrated=parsePlan(old);assert.ok(migrated);assert.equal(migrated.solveMode,'margin');assert.equal(migrated.maxLoss,'77');assert.ok(result(migrated).budget.eq(77));
+});

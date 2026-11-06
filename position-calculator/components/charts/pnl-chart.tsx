@@ -5,7 +5,7 @@ import { D, format, netAtPrice, type Result } from '@/lib/calculations';
 import type { Plan } from '@/lib/types';
 export function PnlChart({plan:p,result:r}:{plan:Plan;result:Result}) {
  const id=useId().replace(/:/g,''), [hover,setHover]=useState<number|null>(null);
- const markers=[{name:'止损',price:new D(p.stop),color:'var(--red)'},{name:'入场',price:new D(p.entry),color:'var(--muted)'},{name:'盈亏平衡',price:r.breakEven,color:'var(--yellow)'},...r.targets.map((t,i)=>({name:`TP${i+1}`,price:t.price,color:'var(--green)'}))];
+ const markers=[{name:'止损',price:r.stop,color:'var(--red)'},{name:'入场',price:new D(p.entry),color:'var(--muted)'},{name:'盈亏平衡',price:r.breakEven,color:'var(--yellow)'},...r.targets.map((t,i)=>({name:`TP${i+1}`,price:t.price,color:'var(--green)'}))];
  const min=D.min(...markers.map(m=>m.price)),max=D.max(...markers.map(m=>m.price)),range=max.minus(min),lo=D.max(0,min.minus(range.mul('.12'))),hi=max.plus(range.mul('.12'));
  const start=netAtPrice(p,r,lo),end=netAtPrice(p,r,hi),yMin=D.min(start,end,0).minus(r.budget.mul('.2')),yMax=D.max(start,end,0).plus(r.budget.mul('.2'));
  const x=(price:InstanceType<typeof D>)=>64+price.minus(lo).div(hi.minus(lo)).toNumber()*650;

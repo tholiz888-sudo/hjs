@@ -2,6 +2,7 @@ export type Direction = 'long' | 'short';
 export type Target = { mode: 'r' | 'price'; value: string; share: string };
 export type Plan = {
   symbol: string; customSymbol: string; direction: Direction;
+  solveMode: 'margin' | 'stop'; marginInput: string;
   riskMode: 'amount' | 'percent'; maxLoss: string;
   equity: string; risk: string; maxRisk: string; entry: string; stop: string; leverage: string;
   openFee: string; closeFee: string; slippage: string; funding: string;
@@ -10,6 +11,7 @@ export type Plan = {
 };
 export type SavedPlan = { id: string; savedAt: string; plan: Plan; quantity: string; targetPrices: string[] };
 export const DEFAULT_PLAN: Plan = {
+  solveMode: 'margin', marginInput: '100',
   riskMode: 'amount', maxLoss: '100',
   symbol: 'BTCUSDT', customSymbol: '', direction: 'long', equity: '5000', risk: '0.5', maxRisk: '5',
   entry: '100200', stop: '99600', leverage: '100', openFee: '0.04', closeFee: '0.04', slippage: '0.02', funding: '0',
