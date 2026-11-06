@@ -11,7 +11,7 @@ const numeric = (v: unknown): v is string => typeof v === 'string' && v.length <
 /** Costs are conservative nonnegative estimates. Slippage is charged once on entry notional
  * for the entire round trip; funding is a total holding-period cost on entry notional.
  * Exit fee uses the hypothetical exit price. No fee discounts or funding credits assumed. */
-export function calculate(p: Plan): Calculation {
+export function calculate(p: Plan, { includeTargets = true }: { includeTargets?: boolean } = {}): Calculation {
   const errors: string[] = [];
   if(!['amount','percent'].includes(p.riskMode)) return {ok:false,errors:['请选择有效的风险输入方式']};
   if(!['margin','stop'].includes(p.solveMode)) return {ok:false,errors:['请选择计算方式']};
@@ -46,8 +46,8 @@ export function calculate(p: Plan): Calculation {
   const distance = n.entry.minus(n.stop).mul(sign);
   if(distance.lte(0)) errors.push(p.direction==='long'?'做多止损必须低于入场价':'做空止损必须高于入场价');
   const targetValues: Num[] = [], shares: Num[] = [];
-  if(!Array.isArray(p.targets)||p.targets.length!==2) return {ok:false,errors:[...errors,'需要两个止盈目标']};
-  p.targets.forEach((t,i)=>{
+  if(includeTargets&&(!Array.isArray(p.targets)||p.targets.length!==2)) return {ok:false,errors:[...errors,'需要两个止盈目标']};
+  (includeTargets?p.targets:[]).forEach((t,i)=>{
     if(!t||!['r','price'].includes(t.mode)||!numeric(t.value)||!numeric(t.share)){errors.push(`TP${i+1} 的目标或比例无效`);return;}
     const price = t.mode==='r' ? n.entry.plus(distance.mul(t.value).mul(sign)) : new D(t.value);
     if(new D(t.value).lte(0)||price.lte(0)||price.minus(n.entry).mul(sign).lte(0)) errors.push(`TP${i+1} 必须是大于零且方向正确的止盈价`);
@@ -76,7 +76,7 @@ export function calculate(p: Plan): Calculation {
   const totalNet=targets.reduce((s,t)=>s.plus(t.batchNet),new D(0));
   const weightedGrossR=targets.reduce((s,t)=>s.plus(t.grossR.mul(t.share)),new D(0));
   const weightedNetR=loss.eq(0)?new D(0):totalNet.div(loss);
-  const partialStop=targets[0].batchNet.minus(loss.mul(targets[1].share));
+  const partialStop=targets.length===2?targets[0].batchNet.minus(loss.mul(targets[1].share)):new D(0);
   const warnings:string[]=[];
   if(quantity.lt(n.minQuantity)||quantity.eq(0)) warnings.push('取整数量低于配置的最小数量，当前方案不可执行');
   if(margin.plus(opening).gt(n.equity)) warnings.push('预估保证金及开仓费超过账户权益，当前方案不可执行');

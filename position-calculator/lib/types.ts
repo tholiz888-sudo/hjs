@@ -9,7 +9,8 @@ export type Plan = {
   priceDecimals: string; priceStep: string; quantityStep: string; minQuantity: string;
   targets: [Target, Target];
 };
-export type SavedPlan = { id: string; savedAt: string; plan: Plan; quantity: string; targetPrices: string[] };
+export type ViewMode = 'simple' | 'professional';
+export type SavedPlan = { view?: ViewMode; id: string; savedAt: string; plan: Plan; quantity: string; targetPrices: string[] };
 export const DEFAULT_PLAN: Plan = {
   solveMode: 'margin', marginInput: '100',
   riskMode: 'amount', maxLoss: '100',

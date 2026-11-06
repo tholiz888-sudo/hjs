@@ -91,3 +91,10 @@ test('pre-inverse saved plans migrate into margin mode without altering risk amo
  const {solveMode,marginInput,...old}=plan({riskMode:'amount',maxLoss:'77'});void solveMode;void marginInput;
  const migrated=parsePlan(old);assert.ok(migrated);assert.equal(migrated.solveMode,'margin');assert.equal(migrated.maxLoss,'77');assert.ok(result(migrated).budget.eq(77));
 });
+
+test('simple view computes the same stop and ignores incomplete professional targets',()=>{
+ const p=plan({solveMode:'stop',riskMode:'amount',marginInput:'100',maxLoss:'100',entry:'100000',leverage:'100',openFee:'0',closeFee:'0',slippage:'0',funding:'0'});
+ const full=result(p),simple=calculate({...p,targets:[{mode:'r',value:'',share:'40'},{mode:'r',value:'3',share:'50'}]},{includeTargets:false});
+ assert.ok(simple.ok);assert.ok(simple.result.stop.eq(full.stop));assert.ok(simple.result.margin.eq(full.margin));assert.ok(simple.result.loss.eq(full.loss));assert.equal(simple.result.targets.length,0);
+ assert.equal(calculate({...p,targets:[{mode:'r',value:'',share:'40'},{mode:'r',value:'3',share:'50'}]}).ok,false);
+});
