@@ -4,7 +4,7 @@ import { calculate, D, format, netAtPrice, type Result } from '../lib/calculatio
 import { DEFAULT_PLAN, type Plan } from '../lib/types';
 import { planText } from '../lib/plan-text';
 import { isPlan, parsePlan } from '../lib/storage';
-const plan=(over:Partial<Plan>={}):Plan=>({...structuredClone(DEFAULT_PLAN),riskMode:'percent',leverage:'5',...over});
+const plan=(over:Partial<Plan>={}):Plan=>({...structuredClone(DEFAULT_PLAN),riskMode:'percent',leverage:'5',costMode:'total',...over});
 function result(p:Plan):Result {const c=calculate(p);assert.ok(c.ok,JSON.stringify(c));return c.result;}
 function close(a:InstanceType<typeof D>,b:string){assert.ok(a.minus(b).abs().lt('0.0000000000001'),`${a} != ${b}`)}
 test('BTC long includes all costs and floors quantity within budget',()=>{
@@ -97,4 +97,16 @@ test('simple view computes the same stop and ignores incomplete professional tar
  const full=result(p),simple=calculate({...p,targets:[{mode:'r',value:'',share:'40'},{mode:'r',value:'3',share:'50'}]},{includeTargets:false});
  assert.ok(simple.ok);assert.ok(simple.result.stop.eq(full.stop));assert.ok(simple.result.margin.eq(full.margin));assert.ok(simple.result.loss.eq(full.loss));assert.equal(simple.result.targets.length,0);
  assert.equal(calculate({...p,targets:[{mode:'r',value:'',share:'40'},{mode:'r',value:'3',share:'50'}]}).ok,false);
+});
+
+test('price-only mode calculates stop even when configured costs would exhaust budget',()=>{
+ const p=plan({costMode:'price',solveMode:'stop',riskMode:'amount',maxLoss:'100',entry:'100000',marginInput:'1000',leverage:'100'});
+ const r=result(p);assert.ok(r.stop.eq(99900));assert.ok(r.loss.eq(100));assert.ok(r.costs.total.eq(0));assert.ok(netAtPrice(p,r,r.stop).eq(-100));assert.ok(r.breakEven.eq(p.entry));
+ assert.equal(calculate({...p,costMode:'total'}).ok,false);
+ const short=result({...p,direction:'short'});assert.ok(short.stop.eq(100100));assert.ok(short.loss.eq(100));
+ const ignored=result({...p,openFee:'bad',funding:'-10'});assert.ok(ignored.stop.eq(r.stop));
+});
+test('cost preference migrates to price-only while old saved plans can retain inclusive costs',()=>{
+ const {costMode,...old}=plan();void costMode;
+ const prefs=parsePlan(old),saved=parsePlan(old,'total');assert.ok(prefs);assert.ok(saved);assert.equal(prefs.costMode,'price');assert.equal(saved.costMode,'total');assert.equal(DEFAULT_PLAN.costMode,'price');
 });

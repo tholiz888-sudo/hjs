@@ -11,7 +11,9 @@ const numeric = (v: unknown): v is string => typeof v === 'string' && v.length <
 /** Costs are conservative nonnegative estimates. Slippage is charged once on entry notional
  * for the entire round trip; funding is a total holding-period cost on entry notional.
  * Exit fee uses the hypothetical exit price. No fee discounts or funding credits assumed. */
-export function calculate(p: Plan, { includeTargets = true }: { includeTargets?: boolean } = {}): Calculation {
+export function calculate(input: Plan, { includeTargets = true }: { includeTargets?: boolean } = {}): Calculation {
+  if(!['price','total'].includes(input.costMode))return {ok:false,errors:['请选择计算费用口径']};
+  const p=costPlan(input);
   const errors: string[] = [];
   if(!['amount','percent'].includes(p.riskMode)) return {ok:false,errors:['请选择有效的风险输入方式']};
   if(!['margin','stop'].includes(p.solveMode)) return {ok:false,errors:['请选择计算方式']};
@@ -89,7 +91,9 @@ export function calculate(p: Plan, { includeTargets = true }: { includeTargets?:
   if(targets.some(t=>t.quantity.gt(0)&&t.quantity.lt(n.minQuantity))) warnings.push('分批数量低于最小数量，需调整分批方案');
   return {ok:true,result:{stop:n.stop,budget,distance,distancePercent:distance.div(n.entry).mul(100),quantity,recommended,notional,margin,loss,costs,breakEven,targets,totalNet,weightedGrossR,weightedNetR,partialStop,warnings,feasible:warnings.length===0}};
 }
-export function netAtPrice(p: Plan,r:Result,price: Decimal.Value): Num {
+export function costPlan(p:Plan):Plan {return p.costMode==='price'?{...p,openFee:'0',closeFee:'0',slippage:'0',funding:'0'}:p;}
+export function netAtPrice(input: Plan,r:Result,price: Decimal.Value): Num {
+  const p=costPlan(input);
   const exit = new D(price), sign=p.direction==='long'?1:-1;
   return r.quantity.mul(exit.minus(p.entry).mul(sign).minus(new D(p.entry).mul(new D(p.openFee).plus(p.slippage).plus(p.funding)).div(100)).minus(exit.mul(p.closeFee).div(100)));
 }

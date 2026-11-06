@@ -16,6 +16,14 @@ try {
  await page.getByLabel('投入保证金',{exact:true}).fill('100');
  await page.getByLabel('最多亏损',{exact:true}).fill('100');
  await page.getByText('费用与资金设置',{exact:false}).click();
+ const costToggle=page.getByRole('checkbox',{name:'计入手续费、滑点和资金费',exact:true});
+ assert.equal(await costToggle.isChecked(),false);
+ await page.getByLabel('投入保证金',{exact:true}).fill('1000');
+ assert.match(await page.getByTestId('stop-price').innerText(),/99,900.00/);
+ await costToggle.check();await page.locator('.validation-panel').waitFor();
+ await costToggle.uncheck();assert.match(await page.getByTestId('stop-price').innerText(),/99,900.00/);
+ await page.getByLabel('投入保证金',{exact:true}).fill('100');
+
  for(const label of ['开仓手续费率','平仓手续费率','往返滑点合计','持仓期资金费成本'])await page.getByLabel(label,{exact:true}).fill('0');
  assert.match(await page.getByTestId('stop-price').innerText(),/99,000.00/);
  await page.getByRole('button',{name:'做空 Short',exact:true}).click();
@@ -138,5 +146,5 @@ try {
  await page.getByLabel('入场价格',{exact:true}).fill('abc');await page.locator('.validation-panel').waitFor();
  assert.equal(await page.getByTestId('quantity').count(),0);
  assert.deepEqual(errors,[]);
- console.log('PASS: simple/professional switching, shared inputs, view persistence, simple responsive layout and hidden-TP isolation, inverse stop-price long/short and persistence, direct-loss 100x margin examples, amount/percent switching, amount persistence, desktop/mobile layout (375–1440px), live risk/leverage updates, invalid inputs, ETH short, TP shares, clipboard, save/load/delete, preference/theme persistence; no runtime errors.');
+ console.log('PASS: price-only default and optional costs regression, simple/professional switching, shared inputs, view persistence, simple responsive layout and hidden-TP isolation, inverse stop-price long/short and persistence, direct-loss 100x margin examples, amount/percent switching, amount persistence, desktop/mobile layout (375–1440px), live risk/leverage updates, invalid inputs, ETH short, TP shares, clipboard, save/load/delete, preference/theme persistence; no runtime errors.');
 } finally {await browser.close();}
