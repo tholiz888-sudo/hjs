@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { calculate, D, format, netAtPrice, type Result } from '../lib/calculations';
 import { DEFAULT_PLAN, type Plan } from '../lib/types';
 import { planText } from '../lib/plan-text';
-import { isPlan } from '../lib/storage';
-const plan=(over:Partial<Plan>={}):Plan=>({...structuredClone(DEFAULT_PLAN),...over});
+import { isPlan, parsePlan } from '../lib/storage';
+const plan=(over:Partial<Plan>={}):Plan=>({...structuredClone(DEFAULT_PLAN),riskMode:'percent',leverage:'5',...over});
 function result(p:Plan):Result {const c=calculate(p);assert.ok(c.ok,JSON.stringify(c));return c.result;}
 function close(a:InstanceType<typeof D>,b:string){assert.ok(a.minus(b).abs().lt('0.0000000000001'),`${a} != ${b}`)}
 test('BTC long includes all costs and floors quantity within budget',()=>{
@@ -46,3 +46,20 @@ test('zero rounded quantity remains safe without NaN or Infinity',()=>{const r=r
 test('format groups only integer portion; trade plan uses calculated data',()=>{assert.equal(format('0.123456789',9),'0.123456789');assert.equal(format('1234567.89123',5),'1,234,567.89123');const p=plan(),r=result(p),text=planText(p,r);assert.ok(text.includes(r.quantity.toFixed()));assert.ok(text.includes(format(r.totalNet)));assert.ok(!/NaN|Infinity/.test(text));});
 test('localStorage shape validator rejects corrupted data',()=>{assert.equal(isPlan(DEFAULT_PLAN),true);assert.equal(isPlan(null),false);assert.equal(isPlan({...DEFAULT_PLAN,targets:[]}),false);assert.equal(isPlan({...DEFAULT_PLAN,entry:12}),false);});
 test('risk properties hold across budgets, stops, directions and fees',()=>{for(const direction of ['long','short'] as const){for(const risk of ['0.25','0.5','1','2']){for(const fee of ['0','0.04','0.1','1']){const p=plan({direction,risk,openFee:fee,closeFee:fee,stop:direction==='long'?'99600':'100800'}),r=result(p);assert.ok(r.loss.lte(r.budget));assert.ok(r.recommended.gte(r.quantity));assert.ok(r.totalNet.eq(r.targets[0].batchNet.plus(r.targets[1].batchNet)));}}}});
+
+test('100x margin from direct maximum loss matches independent zero-cost examples',()=>{
+ const p=plan({riskMode:'amount',maxLoss:'100',entry:'100000',stop:'99000',leverage:'100',openFee:'0',closeFee:'0',slippage:'0',funding:'0'}),a=result(p),b=result({...p,stop:'99500'});
+ assert.ok(a.budget.eq(100));assert.ok(a.margin.eq(100));assert.ok(a.quantity.eq('.1'));
+ assert.ok(b.margin.eq(200));assert.ok(b.quantity.eq('.2'));assert.ok(a.loss.eq(100));assert.ok(b.loss.eq(100));
+ const c=result({...p,leverage:'50'});assert.ok(c.quantity.eq(a.quantity));assert.ok(c.margin.eq(200));
+});
+test('amount mode includes costs, ignores inactive percentages and does not depend on equity for sizing',()=>{
+ const p=plan({riskMode:'amount',maxLoss:'100',leverage:'100',risk:'',maxRisk:''}),a=result(p),b=result({...p,equity:'10000'});
+ assert.ok(a.loss.lte(100));assert.ok(a.quantity.eq(b.quantity));assert.ok(a.margin.eq(b.margin));assert.ok(a.margin.lt(result({...p,openFee:'0',closeFee:'0',slippage:'0'}).margin));
+ for(const maxLoss of ['','0','-1','abc','Infinity','5001'])assert.equal(calculate({...p,maxLoss}).ok,false);
+ assert.ok(a.warnings.some(w=>w.includes('强平')));
+});
+test('old preferences and saved plans migrate without changing their loss budget or leverage',()=>{
+ const {riskMode,maxLoss,...old}=plan();void riskMode;void maxLoss;
+ const migrated=parsePlan(old);assert.ok(migrated);assert.equal(migrated.riskMode,'amount');assert.equal(migrated.maxLoss,'25');assert.equal(migrated.leverage,'5');assert.ok(result(migrated).quantity.eq(result(plan()).quantity));assert.equal(parsePlan({...old,equity:'bad'}),null);
+});

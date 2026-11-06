@@ -13,12 +13,14 @@ const numeric = (v: unknown): v is string => typeof v === 'string' && v.length <
  * Exit fee uses the hypothetical exit price. No fee discounts or funding credits assumed. */
 export function calculate(p: Plan): Calculation {
   const errors: string[] = [];
-  const fields = Object.keys(labels) as (keyof Plan)[];
+  if(!['amount','percent'].includes(p.riskMode)) return {ok:false,errors:['请选择有效的风险输入方式']};
+  const fields = Object.keys(labels).filter(k=>p.riskMode==='percent'||!['risk','maxRisk'].includes(k)) as (keyof Plan)[];
   for (const key of fields) if (!numeric(p[key])) errors.push(`${labels[key]}请输入有效数字`);
   if (errors.length) return {ok:false,errors};
   const n = Object.fromEntries(fields.map(k => [k,new D(p[k] as string)])) as Record<string,Num>;
-  for(const k of ['equity','risk','maxRisk','entry','stop','leverage','priceStep','quantityStep','minQuantity']) if(n[k].lte(0)) errors.push(`${labels[k]}必须大于 0`);
-  if(n.maxRisk.gt(100)||n.risk.gt(n.maxRisk)) errors.push('风险比例不能超过所设上限，上限最大为 100%');
+  for(const k of ['equity',...(p.riskMode==='percent'?['risk','maxRisk']:[]),'entry','stop','leverage','priceStep','quantityStep','minQuantity']) if(n[k].lte(0)) errors.push(`${labels[k]}必须大于 0`);
+  if(p.riskMode==='amount'&&(!numeric(p.maxLoss)||new D(p.maxLoss).lte(0))) errors.push('计划最多亏损请输入大于 0 的有效金额');
+  if(p.riskMode==='percent'&&(n.maxRisk.gt(100)||n.risk.gt(n.maxRisk))) errors.push('风险比例不能超过所设上限，上限最大为 100%');
   if(n.leverage.lt(1)||n.leverage.gt(200)) errors.push('杠杆须在 1–200 倍之间');
   if(!n.priceDecimals.isInteger()||n.priceDecimals.lt(0)||n.priceDecimals.gt(12)) errors.push('价格显示精度须为 0–12 位整数');
   for(const k of ['openFee','closeFee','slippage','funding']) if(n[k].gt(10)) errors.push(`${labels[k]}须在 0–10% 之间`);
@@ -41,7 +43,8 @@ export function calculate(p: Plan): Calculation {
   if(targetValues.length===2&&targetValues[1].minus(targetValues[0]).mul(sign).lte(0)) errors.push('TP2 必须比 TP1 距入场价更远');
   if(errors.length) return {ok:false,errors};
   const openRate = n.openFee.div(100), closeRate=n.closeFee.div(100), slipRate=n.slippage.div(100), fundRate=n.funding.div(100);
-  const budget=n.equity.mul(n.risk).div(100);
+  const budget=p.riskMode==='amount'?new D(p.maxLoss):n.equity.mul(n.risk).div(100);
+  if(budget.gt(n.equity)) return {ok:false,errors:['计划最多亏损不能超过账户权益']};
   const unitLoss=distance.plus(n.entry.mul(openRate.plus(slipRate).plus(fundRate))).plus(n.stop.mul(closeRate));
   const recommended=budget.div(unitLoss);
   // Floor the ratio directly, avoiding double rounding at quantity-step boundaries.
@@ -63,6 +66,7 @@ export function calculate(p: Plan): Calculation {
   const warnings:string[]=[];
   if(quantity.lt(n.minQuantity)||quantity.eq(0)) warnings.push('取整数量低于配置的最小数量，当前方案不可执行');
   if(margin.plus(opening).gt(n.equity)) warnings.push('预估保证金及开仓费超过账户权益，当前方案不可执行');
+  if(n.leverage.gte(50)) warnings.push('高杠杆可能在计划止损前触发强平；缺少交易所保证金参数，无法确认止损前可用空间。实际亏损不保证封顶于预算');
   if(loss.gt(budget)) warnings.push('止损净亏损超过风险预算');
   const tick = new D(10).pow(n.priceDecimals.neg());
   if(n.priceStep.lt(tick)) warnings.push('价格显示精度不足以展示价格步长，请提高精度');
