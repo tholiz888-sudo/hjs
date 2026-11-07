@@ -17,3 +17,7 @@
 @media(max-width:760px){.view-toolbar{justify-content:space-between;gap:10px;margin:0 0 22px}.view-toolbar>span{font-size:9px;max-width:90px;line-height:1.8}.view-switch button{padding:10px 22px;min-height:43px}.simple-workspace{grid-template-columns:1fr;gap:18px}.simple-body{padding:20px}.simple-input .panel-heading{padding:0 20px}.simple-input .input-shell{min-height:48px}.simple-input .input-shell input{font-size:16px}.simple-input .two-fields{gap:12px}.simple-input .input-shell input{padding:12px 9px}.simple-symbol label{gap:7px;font-size:10px}.simple-symbol select{font-size:12px}.simple-result{padding:23px}.simple-stop{font-size:40px}.simple-result-label{margin-bottom:26px}.simple-workspace+footer{margin-top:19px}.simple-settings .two-fields .field>span{font-size:10px}}
 .simple-input{min-width:0}.simple-fee-note{overflow-wrap:anywhere}
 .fee-toggle{display:flex;align-items:center;gap:8px;font-size:11px;line-height:1.8;color:var(--text);margin-bottom:17px;cursor:pointer}.fee-toggle input{width:16px;height:16px;accent-color:var(--yellow);flex-shrink:0}.calculation-basis{font-size:10px;line-height:1.9;color:var(--muted);margin:0 0 13px}
+
+.custom-symbol-editor{display:flex;align-items:flex-end;gap:12px;margin-bottom:18px}.custom-symbol-editor>.field{flex:1;min-width:0;margin-bottom:0}.custom-symbol-editor>.button{flex:none;margin-bottom:22px}.simple-symbol select{max-width:100%}
+
+.simple-symbol label{min-width:0;flex:1}.simple-symbol select{min-width:0}
