@@ -21,3 +21,4 @@
 .custom-symbol-editor{display:flex;align-items:flex-end;gap:12px;margin-bottom:18px}.custom-symbol-editor>.field{flex:1;min-width:0;margin-bottom:0}.custom-symbol-editor>.button{flex:none;margin-bottom:22px}.simple-symbol select{max-width:100%}
 
 .simple-symbol label{min-width:0;flex:1}.simple-symbol select{min-width:0}
+.custom-symbol-editor{flex-wrap:wrap}.custom-symbol-editor>.field{flex-basis:200px}.custom-symbol-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}.custom-symbol-actions .button:last-child:not(:first-child){color:var(--red)}@media(max-width:600px){.custom-symbol-actions{margin-bottom:0}}

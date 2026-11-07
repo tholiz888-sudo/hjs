@@ -3,18 +3,18 @@
   "files": [
     "index.html",
     "icon.svg",
-    "assets/app-a7e976265460a061.js",
-    "assets/style-1ac9fb888dde4c7a.css"
+    "assets/app-76d3c8963cb7e946.js",
+    "assets/style-151ff0dba89ecc66.css"
   ],
   "sources": {
-    "app/globals.css": "336b5d41415f888248d76acf2345550f34a13620d95e7ec1d6d1ba176a83d72b",
+    "app/globals.css": "dcc8dbc6772e36be244c77b97cc8f724b2f71cc5d416430601dfe59d65b9b064",
     "app/icon.svg": "0edf89a3dfe748314d4e5f0da93205df05d08412f30c5740ed2d3e04860cfc42",
-    "app/page.tsx": "685dfd50a4cacd60e0ba13492481b9ea1878ba753eacc958f589e6a0b84698cb",
-    "components/calculator/custom-symbol.tsx": "45796c21034a0cb88fe9d75aea67d8e993fe6175abe323354e7a2430c3f506f3",
-    "components/calculator/inputs.tsx": "26e75744843f49d69661bb5023cf190ff93b4e64110206af3e8eea60eb63d1c9",
+    "app/page.tsx": "8c8e29db4d8f0f6bc7197ec9f8d4ffb62c187241d8ed57eb3d563c24122a8e09",
+    "components/calculator/custom-symbol.tsx": "afa7fd69ee99fbee051e816b5fecfb096e7982b80d0d28a0bf1f2cfcd20e10e5",
+    "components/calculator/inputs.tsx": "d35fdd6bd81d3f30ee84896a8663602e738a92b77d6813ca11a51951890edaf4",
     "components/charts/pnl-chart.tsx": "c0973793b3092b94bae18b2444c9d904e3f832cc2f6906996a8ef452ccbb2f08",
     "components/results/results.tsx": "9644a3dc1a4ff3a7d919cfb82f3f1e4fbd4c68bd9a8914bd32d1b38d52281103",
-    "components/simple/simple-calculator.tsx": "d8c6abf8efcf444af07ae5ff663158ac62ff4da61acd0f19c8d6f1d31367c9fb",
+    "components/simple/simple-calculator.tsx": "575fb93ab0251f76ed79a5db74753ee4c4f221002b4b9a5be3640aa5184463b3",
     "components/ui/button.tsx": "a0bc2b2f59ae3f2e02b5108f6fae89ebefa4f9e740ac420389d7778cb329d6cd",
     "lib/calculations/index.ts": "df65d6be93ebb72364c0833595614910246514fc895016e72ee7e3e34bbac24b",
     "lib/plan-text.ts": "d2c3fc970d5ebfdc3a991fd1d90790bf3bfcd193ea29d55682440e85e19e4aba",
