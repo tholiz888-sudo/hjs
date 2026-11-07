@@ -3,17 +3,17 @@
   "files": [
     "index.html",
     "icon.svg",
-    "assets/app-7c08c065aa04186f.js",
-    "assets/style-d36de473e420ed8e.css"
+    "assets/app-f55b89f085c69efc.js",
+    "assets/style-5aea0996ca0aaa7e.css"
   ],
   "sources": {
-    "app/globals.css": "47f5f99e1909075e2adceea203b976bc955c4955d02ad19d0bbb139c584ebbcc",
+    "app/globals.css": "df114b14e4166bc369562e89dfd4daf8ca1732f938ab22f1abc1fa762c9472c4",
     "app/icon.svg": "0edf89a3dfe748314d4e5f0da93205df05d08412f30c5740ed2d3e04860cfc42",
     "app/page.tsx": "8d77dfe942216e8215c9ab9530784ef687062a13dc95de37b18bd09aab1cfee6",
     "components/calculator/inputs.tsx": "35491722fd174de693c3aadbed02c8cc139a2a8d7390a33d7d0e1fda77bf4cd0",
     "components/charts/pnl-chart.tsx": "c0973793b3092b94bae18b2444c9d904e3f832cc2f6906996a8ef452ccbb2f08",
     "components/results/results.tsx": "9644a3dc1a4ff3a7d919cfb82f3f1e4fbd4c68bd9a8914bd32d1b38d52281103",
-    "components/simple/simple-calculator.tsx": "c41629e1db803576cb6b59f4032c71f2d84aefab70dd3aa8b71e474f576104cf",
+    "components/simple/simple-calculator.tsx": "a69256281bfd8dbbad0f94b95a272a56fde20c04b2e5001f5cb8efef153a7297",
     "components/ui/button.tsx": "a0bc2b2f59ae3f2e02b5108f6fae89ebefa4f9e740ac420389d7778cb329d6cd",
     "lib/calculations/index.ts": "df65d6be93ebb72364c0833595614910246514fc895016e72ee7e3e34bbac24b",
     "lib/plan-text.ts": "d2c3fc970d5ebfdc3a991fd1d90790bf3bfcd193ea29d55682440e85e19e4aba",
