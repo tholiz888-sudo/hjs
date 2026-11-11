@@ -6,6 +6,7 @@ import {
   defaults,
   ema,
   parseCsv,
+  parseCandleTime,
   rsi,
   simulate,
   validateParams,
@@ -113,4 +114,85 @@ test("maximum consecutive losses matches the completed trade sequence", () => {
   assert.ok(maximum > 0);
   assert.equal(result.maxConsecutiveLosses, maximum);
   assert.equal(backtest([], defaults).maxConsecutiveLosses, 0);
+});
+
+test("opposing trend and momentum never report all filters satisfied", () => {
+  const signals = analyze(simulate());
+  const conflict = signals[223];
+  assert.equal(conflict.direction, "neutral");
+  assert.equal(conflict.filters[0].pass, true);
+  assert.equal(conflict.filters[1].pass, false);
+  assert.match(conflict.filters[1].detail, /不一致/);
+  for (const s of signals)
+    if (s.direction === "neutral") assert.ok(s.filters.some((f) => !f.pass));
+  const warmup = analyze(simulate(), {
+    ...defaults,
+    trendEnabled: false,
+    slow: 100,
+  });
+  for (const s of warmup.slice(0, 100)) assert.equal(s.filters[1].pass, false);
+});
+
+test("calendar validation rejects normalized dates, invalid times and nonzero fractional seconds", () => {
+  for (const raw of [
+    "2026-02-30T00:00:00Z",
+    "2026-02-29T00:00:00Z",
+    "2024-04-31T00:00:00Z",
+    "2026-11-10T24:00:00Z",
+    "2026-11-10T00:00:00.0001Z",
+    "2026-11-10T00:00:01Z",
+    "2026-11-10T00:00:00+14:01",
+  ])
+    assert.throws(() => parseCandleTime(raw), /无效|分钟/);
+  assert.equal(
+    parseCandleTime("2024-02-29T08:00:00+08:00"),
+    Date.UTC(2024, 1, 29),
+  );
+  assert.equal(
+    parseCandleTime("2026-11-10T00:00:00.000Z"),
+    Date.UTC(2026, 10, 10),
+  );
+  const text =
+    "datetime,open,high,low,close,volume\n" +
+    Array.from(
+      { length: 120 },
+      (_, i) =>
+        `2026-02-30T${String(Math.floor(i / 60)).padStart(2, "0")}:${String(i % 60).padStart(2, "0")}:00Z,100,101,99,100,10`,
+    ).join("\n");
+  assert.throws(() => parseCsv(text), /第 2 行.*日期无效/);
+});
+
+test("capital exhaustion caps the loss, records the raw move and stops further trades", () => {
+  const rows = simulate();
+  const params = {
+    ...defaults,
+    trendEnabled: false,
+    rsiMin: 0,
+    rsiMax: 100,
+    volumeMultiplier: 0.5,
+  };
+  const baseline = backtest(rows, params);
+  assert.equal(baseline.trades[0].direction, "bearish");
+  const entry = rows.findIndex((r) => r.datetime === baseline.trades[0].time);
+  const stressed = rows.map((r, i) =>
+    i > entry
+      ? {
+          ...r,
+          open: r.open * 3,
+          high: r.high * 3,
+          low: r.low * 3,
+          close: r.close * 3,
+        }
+      : r,
+  );
+  const result = backtest(stressed, params);
+  assert.equal(result.capitalDepleted, true);
+  assert.equal(result.trades.length, 1);
+  assert.equal(result.trades[0].equity, 0);
+  assert.equal(result.trades[0].returnPct, -100);
+  assert.ok(result.trades[0].rawReturnPct < -100);
+  assert.equal(result.returnPct, -100);
+  assert.equal(result.maxDrawdown, 100);
+  assert.ok(result.curve.every((p) => p.equity >= 0));
+  assert.equal(backtest([], defaults).capitalDepleted, false);
 });

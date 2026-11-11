@@ -162,6 +162,15 @@ export function analyze(rows: Candle[], p: Params = defaults): Signal[] {
     const ratio = avg ? row.volume / avg : 0,
       okRsi = rs[i] >= p.rsiMin && rs[i] <= p.rsiMax,
       okVol = ratio > p.volumeMultiplier;
+    const momentumAligned = p.trendEnabled
+      ? (up && crossUp) || (down && crossDown)
+      : crossUp || crossDown;
+    const momentumDetail =
+      !crossUp && !crossDown
+        ? "本根收盘未发生交叉"
+        : p.trendEnabled && !momentumAligned
+          ? `本根收盘${crossUp ? "上穿" : "下穿"}，但与趋势方向不一致或趋势尚未就绪`
+          : `本根收盘发生${crossUp ? "上穿" : "下穿"}`;
     const ready =
       (!p.trendEnabled || cursor >= p.trend - 1) &&
       i >= Math.max(p.slow, p.rsi, p.volumePeriod);
@@ -195,12 +204,8 @@ export function analyze(rows: Candle[], p: Params = defaults): Signal[] {
         },
         {
           name: `1 分钟 EMA${p.fast} / EMA${p.slow}`,
-          detail: crossUp
-            ? "本根收盘发生上穿"
-            : crossDown
-              ? "本根收盘发生下穿"
-              : "本根收盘未发生交叉",
-          pass: crossUp || crossDown,
+          detail: ready ? momentumDetail : "指标预热不足，等待足够的 K 线",
+          pass: ready && momentumAligned,
         },
         {
           name: `RSI(${p.rsi}) 区间过滤`,
@@ -223,6 +228,8 @@ export type Trade = {
   entry: number;
   exit: number;
   returnPct: number;
+  rawReturnPct: number;
+  capitalDepleted: boolean;
   equity: number;
 };
 export function backtest(rows: Candle[], p: Params = defaults) {
@@ -240,7 +247,9 @@ export function backtest(rows: Candle[], p: Params = defaults) {
     if (s.direction === "neutral") continue;
     const entry = rows[i + 1].open,
       exit = rows[i + 10].close;
-    const ret = (exit / entry - 1) * (s.direction === "bullish" ? 1 : -1);
+    const rawReturn = (exit / entry - 1) * (s.direction === "bullish" ? 1 : -1);
+    // Limited-capital research model, not a simulation of margin liquidation.
+    const ret = Math.max(-1, rawReturn);
     lossStreak = ret < 0 ? lossStreak + 1 : 0;
     maxConsecutiveLosses = Math.max(maxConsecutiveLosses, lossStreak);
     equity *= 1 + ret;
@@ -255,6 +264,8 @@ export function backtest(rows: Candle[], p: Params = defaults) {
       entry,
       exit,
       returnPct: ret * 100,
+      rawReturnPct: rawReturn * 100,
+      capitalDepleted: equity === 0,
       equity,
     });
     curve.push({
@@ -262,6 +273,7 @@ export function backtest(rows: Candle[], p: Params = defaults) {
       equity,
       returnPct: (equity / 10000 - 1) * 100,
     });
+    if (equity === 0) break;
     i += 9;
   }
   return {
@@ -276,8 +288,42 @@ export function backtest(rows: Candle[], p: Params = defaults) {
       : 0,
     maxDrawdown,
     maxConsecutiveLosses,
+    capitalDepleted: equity === 0,
     returnPct: (equity / 10000 - 1) * 100,
   };
+}
+// Validate calendar components before Date.parse, which otherwise normalizes Feb 30.
+export function parseCandleTime(raw: string): number {
+  const match =
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d+))?)?(Z|([+-])(\d{2}):(\d{2}))$/.exec(
+      raw,
+    );
+  if (!match) throw new Error("时间请使用含时区的 ISO 格式");
+  const [, y, mo, d, h, mi, sec = "0", fraction = "0", , , zh = "0", zm = "0"] =
+    match;
+  const year = Number(y),
+    month = Number(mo),
+    day = Number(d);
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > days[month - 1] ||
+    Number(h) > 23 ||
+    Number(mi) > 59 ||
+    Number(sec) !== 0 ||
+    /[1-9]/.test(fraction) ||
+    Number(zh) > 14 ||
+    Number(zm) > 59 ||
+    (Number(zh) === 14 && Number(zm) !== 0)
+  )
+    throw new Error("日历日期无效，或时间未按整分钟对齐");
+  const time = Date.parse(raw);
+  if (!Number.isFinite(time) || time % 60000 !== 0)
+    throw new Error("时间无效或未按整分钟对齐");
+  return time;
 }
 export function parseCsv(text: string): Candle[] {
   const lines = text
@@ -294,13 +340,14 @@ export function parseCsv(text: string): Candle[] {
     const cells = line.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
     const get = (f: string) => cells[headers.indexOf(f)];
     const raw = get("datetime");
-    if (
-      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/.test(
-        raw,
-      )
-    )
-      throw new Error(`第 ${index + 2} 行时间请使用含时区的 ISO 格式`);
-    const time = Date.parse(raw);
+    let time: number;
+    try {
+      time = parseCandleTime(raw);
+    } catch (error) {
+      throw new Error(
+        `第 ${index + 2} 行：${error instanceof Error ? error.message : "时间无效"}`,
+      );
+    }
     const nums = fields
       .slice(1)
       .map((f) => (get(f) === "" ? NaN : Number(get(f))));

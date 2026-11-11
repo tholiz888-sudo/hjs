@@ -10,23 +10,16 @@ import {
   UploadCloud,
 } from "lucide-react";
 import { useResearch } from "@/components/provider";
-import {
-  backtest,
-  displayTime,
-  labels,
-  parseCsv,
-  type Candle,
-} from "@/lib/engine";
+import { backtest, displayTime, labels, parseCsv } from "@/lib/engine";
 import { price } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EquityChart } from "@/components/charts";
 export default function Backtest() {
-  const { params, rows: sample } = useResearch();
-  const [customRows, setRows] = useState<Candle[] | null>(null);
-  const rows = customRows ?? sample;
-  const [source, setSource] = useState("内置模拟数据");
+  const { params, rows: sample, uploadedData, setUploadedData } = useResearch();
+  const rows = uploadedData?.rows ?? sample;
+  const source = uploadedData?.name ?? "内置模拟数据";
   const [error, setError] = useState("");
   const [page, setPage] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -34,7 +27,7 @@ export default function Backtest() {
   const result = useMemo(() => backtest(rows, params), [rows, params]);
   const pages = Math.max(1, Math.ceil(result.total / 10));
   const safePage = Math.min(page, pages - 1);
-  const uploaded = source !== "内置模拟数据";
+  const uploaded = uploadedData !== null;
   async function upload(file?: File) {
     if (!file) return;
     setError("");
@@ -45,8 +38,7 @@ export default function Backtest() {
     setBusy(true);
     try {
       const parsed = parseCsv(await file.text());
-      setRows(parsed);
-      setSource(file.name);
+      setUploadedData({ name: file.name, rows: parsed });
       setPage(0);
     } catch (e) {
       setError(e instanceof Error ? e.message : "无法读取 CSV");
@@ -115,8 +107,7 @@ export default function Backtest() {
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  setRows(null);
-                  setSource("内置模拟数据");
+                  setUploadedData(null);
                   setPage(0);
                   setError("");
                 }}
@@ -200,6 +191,14 @@ export default function Backtest() {
           </Card>
         ))}
       </div>
+      {result.capitalDepleted && (
+        <p
+          role="alert"
+          className="mb-5 rounded-lg border border-negative/30 bg-negative/5 p-4 text-xs leading-6 text-negative"
+        >
+          模拟本金已耗尽，回测已停止。本笔计入的模拟损失以上笔剩余本金为限；不模拟真实保证金强平或债务。
+        </p>
+      )}
       <Card className="mb-5">
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -276,6 +275,14 @@ export default function Backtest() {
                     >
                       {t.returnPct > 0 ? "+" : ""}
                       {t.returnPct.toFixed(3)}%
+                      {t.capitalDepleted && (
+                        <span
+                          className="ml-2 text-[9px]"
+                          title={`原始方向价格变化 ${t.rawReturnPct.toFixed(3)}%，按剩余本金限制模拟亏损`}
+                        >
+                          本金耗尽
+                        </span>
+                      )}
                     </td>
                     <td>{price(t.equity)}</td>
                   </tr>
@@ -326,7 +333,7 @@ export default function Backtest() {
           1），看跌取其相反数。
         </p>
         <p>
-          未计手续费、滑点、资金费、流动性及交易执行约束；最大回撤仅基于已平仓权益，未反映持仓内波动。上传数据不会传往服务器，不会自动验证其真实性。零交易不等于策略有效。
+          未计手续费、滑点、资金费、流动性及交易执行约束；最大回撤仅基于已平仓权益，未反映持仓内波动。上传数据不会传往服务器，不会自动验证其真实性。跨页调整规则会保留上传数据；刷新页面后需重新上传。零交易不等于策略有效。模拟单笔亏损最多计入剩余本金，触及上限后权益归零并停止后续交易；未模拟持仓内强平路径或实际保证金债务。
         </p>
       </div>
     </>

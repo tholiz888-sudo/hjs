@@ -24,6 +24,8 @@ signal-dashboard/
     market-data.ts
     utils.ts
   tests/engine.test.ts
+  e2e/dashboard.spec.ts
+  playwright.config.ts
   package.json
   package-lock.json
   components.json
@@ -37,7 +39,7 @@ signal-dashboard/
 
 ## 2. 关键依赖
 
-Next.js 14 App Router、React 18、TypeScript、Tailwind CSS 3、Radix/shadcn UI 基础组件及 Recharts。
+Next.js 15.5.29 App Router（安全修复升级）、React 18、TypeScript、Tailwind CSS 3、Radix/shadcn UI 基础组件及 Recharts。
 
 
 ### `package.json`
@@ -51,8 +53,9 @@ Next.js 14 App Router、React 18、TypeScript、Tailwind CSS 3、Radix/shadcn UI
     "dev": "next dev -H 0.0.0.0 -p 3010",
     "build": "next build",
     "start": "next start -H 0.0.0.0",
-    "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/*.test.ts"
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "test:browser": "playwright test"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.0",
@@ -60,24 +63,28 @@ Next.js 14 App Router、React 18、TypeScript、Tailwind CSS 3、Radix/shadcn UI
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.468.0",
-    "next": "14.2.35",
+    "next": "15.5.29",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "recharts": "^2.15.4",
     "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.0",
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.49",
+    "postcss": "^8.5.32",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.20.0",
     "typescript": "^5.7.0"
   },
   "engines": {
     "node": "24.x"
+  },
+  "overrides": {
+    "postcss": "$postcss"
   }
 }
 ```
@@ -253,20 +260,34 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { defaults, type Params, simulate, validateParams } from "@/lib/engine";
+import {
+  defaults,
+  type Params,
+  type Candle,
+  simulate,
+  validateParams,
+} from "@/lib/engine";
 const Context = createContext<{
   params: Params;
   save: (p: Params) => void;
   rows: ReturnType<typeof simulate>;
   regenerate: () => void;
+  uploadedData: { name: string; rows: Candle[] } | null;
+  setUploadedData: (data: { name: string; rows: Candle[] } | null) => void;
 }>({
   params: defaults,
   save: () => {},
   rows: simulate(),
   regenerate: () => {},
+  uploadedData: null,
+  setUploadedData: () => {},
 });
 export function ResearchProvider({ children }: { children: ReactNode }) {
   const [params, setParams] = useState(defaults);
+  const [uploadedData, setUploadedData] = useState<{
+    name: string;
+    rows: Candle[];
+  } | null>(null);
   const [seed, setSeed] = useState(42);
   const [rows, setRows] = useState(() => simulate());
   function regenerate() {
@@ -291,7 +312,9 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, []);
   return (
-    <Context.Provider value={{ params, save, rows, regenerate }}>
+    <Context.Provider
+      value={{ params, save, rows, regenerate, uploadedData, setUploadedData }}
+    >
       {children}
     </Context.Provider>
   );
@@ -1913,7 +1936,7 @@ export default function Rules() {
 
 ## 6. 回测页核心代码
 
-浏览器解析 CSV；下一根开盘进入、十根分钟 K 线后退出；仅统计完成观察窗、不重叠。零收益不算胜利、会中断连续亏损。显示胜率、平均收益、连续亏损、累计收益、最大回撤和分页明细。未计交易成本。
+浏览器解析 CSV；下一根开盘进入、十根分钟 K 线后退出；仅统计完成观察窗、不重叠。零收益不算胜利、会中断连续亏损。本金耗尽时将模拟损失限制为剩余本金并停止后续交易；上传数据跨页保留，刷新后需重新上传。显示胜率、平均收益、连续亏损、累计收益、最大回撤和分页明细。未计交易成本。
 
 
 ### `app/backtest/page.tsx`
@@ -1931,23 +1954,16 @@ import {
   UploadCloud,
 } from "lucide-react";
 import { useResearch } from "@/components/provider";
-import {
-  backtest,
-  displayTime,
-  labels,
-  parseCsv,
-  type Candle,
-} from "@/lib/engine";
+import { backtest, displayTime, labels, parseCsv } from "@/lib/engine";
 import { price } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EquityChart } from "@/components/charts";
 export default function Backtest() {
-  const { params, rows: sample } = useResearch();
-  const [customRows, setRows] = useState<Candle[] | null>(null);
-  const rows = customRows ?? sample;
-  const [source, setSource] = useState("内置模拟数据");
+  const { params, rows: sample, uploadedData, setUploadedData } = useResearch();
+  const rows = uploadedData?.rows ?? sample;
+  const source = uploadedData?.name ?? "内置模拟数据";
   const [error, setError] = useState("");
   const [page, setPage] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -1955,7 +1971,7 @@ export default function Backtest() {
   const result = useMemo(() => backtest(rows, params), [rows, params]);
   const pages = Math.max(1, Math.ceil(result.total / 10));
   const safePage = Math.min(page, pages - 1);
-  const uploaded = source !== "内置模拟数据";
+  const uploaded = uploadedData !== null;
   async function upload(file?: File) {
     if (!file) return;
     setError("");
@@ -1966,8 +1982,7 @@ export default function Backtest() {
     setBusy(true);
     try {
       const parsed = parseCsv(await file.text());
-      setRows(parsed);
-      setSource(file.name);
+      setUploadedData({ name: file.name, rows: parsed });
       setPage(0);
     } catch (e) {
       setError(e instanceof Error ? e.message : "无法读取 CSV");
@@ -2036,8 +2051,7 @@ export default function Backtest() {
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  setRows(null);
-                  setSource("内置模拟数据");
+                  setUploadedData(null);
                   setPage(0);
                   setError("");
                 }}
@@ -2121,6 +2135,14 @@ export default function Backtest() {
           </Card>
         ))}
       </div>
+      {result.capitalDepleted && (
+        <p
+          role="alert"
+          className="mb-5 rounded-lg border border-negative/30 bg-negative/5 p-4 text-xs leading-6 text-negative"
+        >
+          模拟本金已耗尽，回测已停止。本笔计入的模拟损失以上笔剩余本金为限；不模拟真实保证金强平或债务。
+        </p>
+      )}
       <Card className="mb-5">
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -2197,6 +2219,14 @@ export default function Backtest() {
                     >
                       {t.returnPct > 0 ? "+" : ""}
                       {t.returnPct.toFixed(3)}%
+                      {t.capitalDepleted && (
+                        <span
+                          className="ml-2 text-[9px]"
+                          title={`原始方向价格变化 ${t.rawReturnPct.toFixed(3)}%，按剩余本金限制模拟亏损`}
+                        >
+                          本金耗尽
+                        </span>
+                      )}
                     </td>
                     <td>{price(t.equity)}</td>
                   </tr>
@@ -2247,7 +2277,7 @@ export default function Backtest() {
           1），看跌取其相反数。
         </p>
         <p>
-          未计手续费、滑点、资金费、流动性及交易执行约束；最大回撤仅基于已平仓权益，未反映持仓内波动。上传数据不会传往服务器，不会自动验证其真实性。零交易不等于策略有效。
+          未计手续费、滑点、资金费、流动性及交易执行约束；最大回撤仅基于已平仓权益，未反映持仓内波动。上传数据不会传往服务器，不会自动验证其真实性。跨页调整规则会保留上传数据；刷新页面后需重新上传。零交易不等于策略有效。模拟单笔亏损最多计入剩余本金，触及上限后权益归零并停止后续交易；未模拟持仓内强平路径或实际保证金债务。
         </p>
       </div>
     </>
@@ -2427,6 +2457,15 @@ export function analyze(rows: Candle[], p: Params = defaults): Signal[] {
     const ratio = avg ? row.volume / avg : 0,
       okRsi = rs[i] >= p.rsiMin && rs[i] <= p.rsiMax,
       okVol = ratio > p.volumeMultiplier;
+    const momentumAligned = p.trendEnabled
+      ? (up && crossUp) || (down && crossDown)
+      : crossUp || crossDown;
+    const momentumDetail =
+      !crossUp && !crossDown
+        ? "本根收盘未发生交叉"
+        : p.trendEnabled && !momentumAligned
+          ? `本根收盘${crossUp ? "上穿" : "下穿"}，但与趋势方向不一致或趋势尚未就绪`
+          : `本根收盘发生${crossUp ? "上穿" : "下穿"}`;
     const ready =
       (!p.trendEnabled || cursor >= p.trend - 1) &&
       i >= Math.max(p.slow, p.rsi, p.volumePeriod);
@@ -2460,12 +2499,8 @@ export function analyze(rows: Candle[], p: Params = defaults): Signal[] {
         },
         {
           name: `1 分钟 EMA${p.fast} / EMA${p.slow}`,
-          detail: crossUp
-            ? "本根收盘发生上穿"
-            : crossDown
-              ? "本根收盘发生下穿"
-              : "本根收盘未发生交叉",
-          pass: crossUp || crossDown,
+          detail: ready ? momentumDetail : "指标预热不足，等待足够的 K 线",
+          pass: ready && momentumAligned,
         },
         {
           name: `RSI(${p.rsi}) 区间过滤`,
@@ -2488,6 +2523,8 @@ export type Trade = {
   entry: number;
   exit: number;
   returnPct: number;
+  rawReturnPct: number;
+  capitalDepleted: boolean;
   equity: number;
 };
 export function backtest(rows: Candle[], p: Params = defaults) {
@@ -2505,7 +2542,9 @@ export function backtest(rows: Candle[], p: Params = defaults) {
     if (s.direction === "neutral") continue;
     const entry = rows[i + 1].open,
       exit = rows[i + 10].close;
-    const ret = (exit / entry - 1) * (s.direction === "bullish" ? 1 : -1);
+    const rawReturn = (exit / entry - 1) * (s.direction === "bullish" ? 1 : -1);
+    // Limited-capital research model, not a simulation of margin liquidation.
+    const ret = Math.max(-1, rawReturn);
     lossStreak = ret < 0 ? lossStreak + 1 : 0;
     maxConsecutiveLosses = Math.max(maxConsecutiveLosses, lossStreak);
     equity *= 1 + ret;
@@ -2520,6 +2559,8 @@ export function backtest(rows: Candle[], p: Params = defaults) {
       entry,
       exit,
       returnPct: ret * 100,
+      rawReturnPct: rawReturn * 100,
+      capitalDepleted: equity === 0,
       equity,
     });
     curve.push({
@@ -2527,6 +2568,7 @@ export function backtest(rows: Candle[], p: Params = defaults) {
       equity,
       returnPct: (equity / 10000 - 1) * 100,
     });
+    if (equity === 0) break;
     i += 9;
   }
   return {
@@ -2541,8 +2583,42 @@ export function backtest(rows: Candle[], p: Params = defaults) {
       : 0,
     maxDrawdown,
     maxConsecutiveLosses,
+    capitalDepleted: equity === 0,
     returnPct: (equity / 10000 - 1) * 100,
   };
+}
+// Validate calendar components before Date.parse, which otherwise normalizes Feb 30.
+export function parseCandleTime(raw: string): number {
+  const match =
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d+))?)?(Z|([+-])(\d{2}):(\d{2}))$/.exec(
+      raw,
+    );
+  if (!match) throw new Error("时间请使用含时区的 ISO 格式");
+  const [, y, mo, d, h, mi, sec = "0", fraction = "0", , , zh = "0", zm = "0"] =
+    match;
+  const year = Number(y),
+    month = Number(mo),
+    day = Number(d);
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > days[month - 1] ||
+    Number(h) > 23 ||
+    Number(mi) > 59 ||
+    Number(sec) !== 0 ||
+    /[1-9]/.test(fraction) ||
+    Number(zh) > 14 ||
+    Number(zm) > 59 ||
+    (Number(zh) === 14 && Number(zm) !== 0)
+  )
+    throw new Error("日历日期无效，或时间未按整分钟对齐");
+  const time = Date.parse(raw);
+  if (!Number.isFinite(time) || time % 60000 !== 0)
+    throw new Error("时间无效或未按整分钟对齐");
+  return time;
 }
 export function parseCsv(text: string): Candle[] {
   const lines = text
@@ -2559,13 +2635,14 @@ export function parseCsv(text: string): Candle[] {
     const cells = line.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
     const get = (f: string) => cells[headers.indexOf(f)];
     const raw = get("datetime");
-    if (
-      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/.test(
-        raw,
-      )
-    )
-      throw new Error(`第 ${index + 2} 行时间请使用含时区的 ISO 格式`);
-    const time = Date.parse(raw);
+    let time: number;
+    try {
+      time = parseCandleTime(raw);
+    } catch (error) {
+      throw new Error(
+        `第 ${index + 2} 行：${error instanceof Error ? error.message : "时间无效"}`,
+      );
+    }
     const nums = fields
       .slice(1)
       .map((f) => (get(f) === "" ? NaN : Number(get(f))));

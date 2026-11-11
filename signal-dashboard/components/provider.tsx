@@ -7,20 +7,34 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { defaults, type Params, simulate, validateParams } from "@/lib/engine";
+import {
+  defaults,
+  type Params,
+  type Candle,
+  simulate,
+  validateParams,
+} from "@/lib/engine";
 const Context = createContext<{
   params: Params;
   save: (p: Params) => void;
   rows: ReturnType<typeof simulate>;
   regenerate: () => void;
+  uploadedData: { name: string; rows: Candle[] } | null;
+  setUploadedData: (data: { name: string; rows: Candle[] } | null) => void;
 }>({
   params: defaults,
   save: () => {},
   rows: simulate(),
   regenerate: () => {},
+  uploadedData: null,
+  setUploadedData: () => {},
 });
 export function ResearchProvider({ children }: { children: ReactNode }) {
   const [params, setParams] = useState(defaults);
+  const [uploadedData, setUploadedData] = useState<{
+    name: string;
+    rows: Candle[];
+  } | null>(null);
   const [seed, setSeed] = useState(42);
   const [rows, setRows] = useState(() => simulate());
   function regenerate() {
@@ -45,7 +59,9 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, []);
   return (
-    <Context.Provider value={{ params, save, rows, regenerate }}>
+    <Context.Provider
+      value={{ params, save, rows, regenerate, uploadedData, setUploadedData }}
+    >
       {children}
     </Context.Provider>
   );
