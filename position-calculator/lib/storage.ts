@@ -33,3 +33,5 @@ export function parsePlanBackup(text:string): SavedPlan[] {
   if(plans.length!==rows.length||new Set(plans.map(p=>p.id)).size!==plans.length)throw Error('备份包含无效或重复计划，未导入');
   return plans;
 }
+
+export const SIMPLE_PREF_KEY='cpc:preferences:simple:v1', PRO_PREF_KEY='cpc:preferences:professional:v1';

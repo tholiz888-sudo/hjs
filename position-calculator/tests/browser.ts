@@ -42,8 +42,11 @@ try {
  await page.getByRole('button',{name:'关闭已保存计划'}).click();
  await page.getByRole('button',{name:'专业版',exact:true}).click();
  await page.locator('.workspace').waitFor();
+ assert.equal(await page.getByLabel('入场价格',{exact:true}).inputValue(),'100200');
+ assert.equal(await page.getByLabel('止损价格',{exact:true}).inputValue(),'99600');
+ await page.getByRole('button',{name:'按保证金算止损价',exact:true}).click();
+ await page.getByLabel('入场价格',{exact:true}).fill('100000');
  assert.equal(await page.getByLabel('投入保证金',{exact:true}).inputValue(),'100');
- assert.equal(await page.getByLabel('入场价格',{exact:true}).inputValue(),'100000');
  assert.match(await page.getByTestId('stop-price').innerText(),/99,000.00/);
  await page.getByLabel('TP1 平仓比例',{exact:true}).fill('40');
  await page.locator('.validation-panel').waitFor();
@@ -146,5 +149,5 @@ try {
  await page.getByLabel('入场价格',{exact:true}).fill('abc');await page.locator('.validation-panel').waitFor();
  assert.equal(await page.getByTestId('quantity').count(),0);
  assert.deepEqual(errors,[]);
- console.log('PASS: price-only default and optional costs regression, simple/professional switching, shared inputs, view persistence, simple responsive layout and hidden-TP isolation, inverse stop-price long/short and persistence, direct-loss 100x margin examples, amount/percent switching, amount persistence, desktop/mobile layout (375–1440px), live risk/leverage updates, invalid inputs, ETH short, TP shares, clipboard, save/load/delete, preference/theme persistence; no runtime errors.');
+ console.log('PASS: price-only default and optional costs regression, simple/professional switching, independent version inputs, view persistence, simple responsive layout and hidden-TP isolation, inverse stop-price long/short and persistence, direct-loss 100x margin examples, amount/percent switching, amount persistence, desktop/mobile layout (375–1440px), live risk/leverage updates, invalid inputs, ETH short, TP shares, clipboard, save/load/delete, preference/theme persistence; no runtime errors.');
 } finally {await browser.close();}
