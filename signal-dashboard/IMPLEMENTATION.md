@@ -14,14 +14,18 @@ signal-dashboard/
     page.tsx
     rules/page.tsx
     backtest/page.tsx
+    api/market/route.ts
   components/
     shell.tsx
     provider.tsx
     charts.tsx
+    market-controls.tsx
     ui/{button,card,badge,input,switch}.tsx
   lib/
     engine.ts
     market-data.ts
+    binance.ts
+    use-market.ts
     utils.ts
   tests/engine.test.ts
   e2e/dashboard.spec.ts
@@ -140,6 +144,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useResearch } from "./provider";
 const disclaimer =
   "仅供研究学习，不构成任何投资建议。历史表现不代表未来结果，交易有风险，请谨慎决策。";
 const links = [
@@ -149,6 +154,13 @@ const links = [
 ];
 export function Shell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
+  const { marketMode, market } = useResearch();
+  const statusLabel =
+    marketMode === "simulated"
+      ? "模拟演示环境"
+      : market.healthy
+        ? "币安行情已连接"
+        : "币安行情连接中或暂停";
   return (
     <>
       <div className="risk-banner">
@@ -196,7 +208,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </p>
           <div className="mt-5 flex items-center gap-2 text-[10px] text-muted">
             <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-            本地模拟环境 <ArrowUpRight size={12} />
+            {statusLabel} <ArrowUpRight size={12} />
           </div>
         </div>
         <div className="sidebar-bottom">
@@ -215,7 +227,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-2 text-[11px] text-muted">
               <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-              模拟引擎就绪
+              {statusLabel}
             </span>
             <span className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-white/5 text-[10px]">
               SL
@@ -239,7 +251,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             {disclaimer}
           </p>
           <span>© 2026 SIGNAL LAB · 研究与教育用途</span>
-          <span>所有信号均由模拟数据生成 · UTC+8</span>
+          <span>首页行情来源可切换；回测均为研究用途 · UTC+8</span>
         </footer>
       </div>
     </>
@@ -267,8 +279,15 @@ import {
   simulate,
   validateParams,
 } from "@/lib/engine";
+import { useBinanceMarket } from "@/lib/use-market";
+import type { MarketSymbol } from "@/lib/binance";
 const Context = createContext<{
   params: Params;
+  marketMode: "live" | "simulated";
+  setMarketMode: (mode: "live" | "simulated") => void;
+  symbol: MarketSymbol;
+  setSymbol: (symbol: MarketSymbol) => void;
+  market: ReturnType<typeof useBinanceMarket>;
   save: (p: Params) => void;
   rows: ReturnType<typeof simulate>;
   regenerate: () => void;
@@ -276,6 +295,20 @@ const Context = createContext<{
   setUploadedData: (data: { name: string; rows: Candle[] } | null) => void;
 }>({
   params: defaults,
+  marketMode: "live",
+  setMarketMode: () => {},
+  symbol: "BTCUSDT",
+  setSymbol: () => {},
+  market: {
+    snapshot: null,
+    healthy: false,
+    ageMs: Infinity,
+    loading: false,
+    error: null,
+    receivedAt: 0,
+    retrySeconds: 0,
+    refresh: () => {},
+  },
   save: () => {},
   rows: simulate(),
   regenerate: () => {},
@@ -284,6 +317,9 @@ const Context = createContext<{
 });
 export function ResearchProvider({ children }: { children: ReactNode }) {
   const [params, setParams] = useState(defaults);
+  const [marketMode, setMarketMode] = useState<"live" | "simulated">("live");
+  const [symbol, setSymbol] = useState<MarketSymbol>("BTCUSDT");
+  const market = useBinanceMarket(symbol, marketMode === "live");
   const [uploadedData, setUploadedData] = useState<{
     name: string;
     rows: Candle[];
@@ -313,7 +349,19 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
   }, []);
   return (
     <Context.Provider
-      value={{ params, save, rows, regenerate, uploadedData, setUploadedData }}
+      value={{
+        params,
+        save,
+        rows,
+        regenerate,
+        uploadedData,
+        setUploadedData,
+        marketMode,
+        setMarketMode,
+        symbol,
+        setSymbol,
+        market,
+      }}
     >
       {children}
     </Context.Provider>
@@ -959,7 +1007,7 @@ Switch.displayName = "Switch";
 
 ## 4. 仪表盘首页完整代码
 
-大号三态信号、过滤条件、当前模拟价格、Recharts OHLC 蜡烛图和最近 20 条触发信号。数据量不足时仅展示实际存在的信号；不伪造历史条数。过滤条件计数是规则满足情况，不是预测概率。
+大号三态信号、过滤条件、默认币安已收盘价格（模拟需手动切换）、Recharts OHLC 蜡烛图和最近 20 条触发信号。数据量不足时仅展示实际存在的信号；不伪造历史条数。过滤条件计数是规则满足情况，不是预测概率。
 
 
 ### `app/page.tsx`
@@ -992,22 +1040,61 @@ import {
   displayDate,
   displayTime,
   labels,
-  simulate,
+  type Candle,
 } from "@/lib/engine";
 import { price, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MarketControls } from "@/components/market-controls";
 import { PriceChart } from "@/components/charts";
 export default function Dashboard() {
-  const { params, rows, regenerate } = useResearch();
+  const { rows: simulatedRows, marketMode, market } = useResearch();
+  const rows =
+    marketMode === "live" ? (market.snapshot?.candles ?? []) : simulatedRows;
+  if (!rows.length)
+    return (
+      <>
+        <section className="section-heading">
+          <div>
+            <div className="eyebrow">BINANCE / 币安公开行情</div>
+            <h1 className="page-title">10 分钟方向研究</h1>
+            <p className="page-desc">
+              选择 BTC 或 ETH，使用真实已收盘 K 线计算研究信号。
+            </p>
+          </div>
+        </section>
+        <MarketControls />
+        <Card>
+          <CardContent className="py-12 text-center">
+            <h2 className="text-3xl text-muted">
+              {market.loading ? "正在加载行情" : "实时信号暂停"}
+            </h2>
+            <p className="mt-4 text-xs text-muted">
+              尚无可验证的币安行情，不显示价格、方向建议或胜率。可等待自动重试，或明确选择模拟数据练习。
+            </p>
+          </CardContent>
+        </Card>
+      </>
+    );
+  return <DashboardContent rows={rows} />;
+}
+function DashboardContent({ rows }: { rows: Candle[] }) {
+  const { params, regenerate, marketMode, symbol, market } = useResearch();
+  const live = marketMode === "live";
+  const paused = live && !market.healthy;
+  const sourceLabel = live ? "币安行情 · 研究用途" : "模拟数据";
   const [range, setRange] = useState(60);
   const [showEma, setShowEma] = useState(true);
   const [notice, setNotice] = useState("");
   const signals = useMemo(() => analyze(rows, params), [rows, params]);
   const stats = useMemo(() => backtest(rows, params), [rows, params]);
-  const current = signals[signals.length - 1],
-    last = rows[rows.length - 1],
+  const latest = signals[signals.length - 1];
+  const current = paused
+    ? { ...latest, direction: "neutral" as const, filters: [] }
+    : latest;
+  const lastSignalTime = latest.time;
+  const last = rows[rows.length - 1],
     prior = rows[rows.length - 61];
   const change = (last.close / prior.close - 1) * 100;
   const recent = signals
@@ -1022,8 +1109,8 @@ export default function Dashboard() {
     high: r.high,
     low: r.low,
     close: r.close,
-    fast: signals[rows.length - range + i].fast,
-    slow: signals[rows.length - range + i].slow,
+    fast: signals[Math.max(0, rows.length - range) + i].fast,
+    slow: signals[Math.max(0, rows.length - range) + i].slow,
   }));
   const Icon =
     current.direction === "bullish"
@@ -1035,7 +1122,13 @@ export default function Dashboard() {
     const blob = new Blob(
       [
         JSON.stringify(
-          { source: "模拟数据 · 仅供研究学习", params, signal: current },
+          {
+            source: sourceLabel,
+            symbol: live ? symbol : "SIMULATED_BTCUSDT",
+            paused,
+            params,
+            signal: paused ? null : current,
+          },
           null,
           2,
         ),
@@ -1048,7 +1141,7 @@ export default function Dashboard() {
     a.download = "signal-research.json";
     a.click();
     URL.revokeObjectURL(url);
-    setNotice("模拟信号快照已导出");
+    setNotice("研究信号快照已导出");
   }
   return (
     <>
@@ -1072,29 +1165,32 @@ export default function Dashboard() {
           导出快照
         </Button>
       </section>
+      <MarketControls />
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-y border-border py-3">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f8a63c] text-lg font-bold text-[#3b2205]">
-            ₿
+            {live && symbol === "ETHUSDT" ? "Ξ" : "₿"}
           </div>
           <span className="font-semibold tracking-wide">
-            BTC <span className="text-muted">/ USDT</span>
+            {live ? symbol.replace("USDT", "") : "BTC"}{" "}
+            <span className="text-muted">/ USDT</span>
           </span>
-          <Badge>模拟市场</Badge>
+          <Badge>{sourceLabel}</Badge>
           <span className="hidden text-[11px] text-muted sm:inline">
             1 分钟 K 线 · 10 分钟观察窗
           </span>
         </div>
         <span className="flex items-center gap-2 text-[10px] text-muted">
           <Clock3 size={12} />
-          样本时间 {displayDate(last.datetime)} {displayTime(last.datetime)}{" "}
-          UTC+8
+          {live ? "最近收盘" : "样本时间"}{" "}
+          {displayDate(live ? lastSignalTime : last.datetime)}{" "}
+          {displayTime(live ? lastSignalTime : last.datetime)} UTC+8
         </span>
       </div>
       <div className="mb-5 grid grid-cols-2 gap-3 xl:grid-cols-4">
         {[
           {
-            label: "最新模拟价格",
+            label: live ? "币安最近收盘价" : "最新模拟价格",
             value: `$${price(last.close)}`,
             sub: `近 60 分钟 ${change >= 0 ? "+" : ""}${change.toFixed(2)}%`,
             color: change >= 0 ? "text-positive" : "text-negative",
@@ -1126,7 +1222,9 @@ export default function Dashboard() {
             <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <p className="metric-label">{m.label}</p>
-                <span className="data-label">模拟数据</span>
+                <span className="data-label">
+                  {live ? "研究用途" : "模拟数据"}
+                </span>
               </div>
               <div className="metric-value">{m.value}</div>
               <div
@@ -1154,7 +1252,7 @@ export default function Dashboard() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <CardTitle>1 分钟 K 线</CardTitle>
-                  <Badge>模拟数据</Badge>
+                  <Badge>{sourceLabel}</Badge>
                 </div>
                 <div className="flex gap-1 rounded-md bg-background p-1">
                   {[30, 60, 180].map((n) => (
@@ -1188,12 +1286,16 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent className="px-3 pb-3">
-              <PriceChart data={chart} showEma={showEma} />
+              <PriceChart
+                data={chart}
+                showEma={showEma}
+                sourceLabel={sourceLabel}
+              />
               <div className="mt-4 flex flex-wrap items-center justify-between gap-2 px-3">
                 <div className="flex gap-4 text-[10px] text-muted">
                   <span>
                     <i className="mr-1 inline-block h-0.5 w-3 bg-primary" />
-                    模拟 K 线
+                    {live ? "币安 K 线" : "模拟 K 线"}
                   </span>
                   <span>
                     <i className="mr-1 inline-block h-0.5 w-3 bg-[#76aee7]" />
@@ -1272,7 +1374,9 @@ export default function Dashboard() {
               </table>
             </div>
             <p className="px-5 py-3 text-[9px] text-muted">
-              仅展示收盘时触发的历史模拟信号，不代表实际成交或未来收益。
+              {live
+                ? "仅展示币安历史已收盘数据触发的研究信号；连接异常时保留历史快照，不代表当前可交易。"
+                : "仅展示收盘时触发的历史模拟信号，不代表实际成交或未来收益。"}
             </p>
           </Card>
         </div>
@@ -1290,7 +1394,9 @@ export default function Dashboard() {
             <CardHeader>
               <div className="flex justify-between">
                 <CardTitle>当前方向信号</CardTitle>
-                <Badge className="border-0 bg-white/5">模拟数据</Badge>
+                <Badge className="border-0 bg-white/5">
+                  {paused ? "暂停" : sourceLabel}
+                </Badge>
               </div>
             </CardHeader>
             <CardContent>
@@ -1305,34 +1411,40 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <div className="text-[35px] font-semibold tracking-tight">
-                    {labels[current.direction]}
+                    {paused ? "暂停" : labels[current.direction]}
                   </div>
                   <div className="mt-1 text-[9px] tracking-[.18em]">
-                    {current.direction === "neutral"
-                      ? "WAIT FOR CONFIRMATION"
-                      : current.direction === "bullish"
-                        ? "BULLISH SIGNAL"
-                        : "BEARISH SIGNAL"}
+                    {paused
+                      ? "DATA UNAVAILABLE"
+                      : current.direction === "neutral"
+                        ? "WAIT FOR CONFIRMATION"
+                        : current.direction === "bullish"
+                          ? "BULLISH SIGNAL"
+                          : "BEARISH SIGNAL"}
                   </div>
                 </div>
               </div>
               <p className="text-[11px] leading-6 text-muted">
-                {current.direction === "neutral"
-                  ? "过滤条件尚未全部满足，等待趋势与交叉形成共振。保持观望也是研究的一部分。"
-                  : params.trendEnabled
-                    ? "趋势方向与均线交叉一致，RSI 和成交量过滤均已通过。下一根开盘起观察 10 分钟。"
-                    : "趋势过滤已关闭；均线交叉、RSI 和成交量过滤通过。下一根开盘起观察 10 分钟。"}
+                {paused
+                  ? "行情连接异常或数据已过期，暂停当前研究信号。下方图表仅为最后成功获取的历史数据。"
+                  : current.direction === "neutral"
+                    ? "过滤条件尚未全部满足，等待趋势与交叉形成共振。保持观望也是研究的一部分。"
+                    : params.trendEnabled
+                      ? "趋势方向与均线交叉一致，RSI 和成交量过滤均已通过。下一根开盘起观察 10 分钟。"
+                      : "趋势过滤已关闭；均线交叉、RSI 和成交量过滤通过。下一根开盘起观察 10 分钟。"}
               </p>
               <div className="my-5 border-t border-border" />
               <div className="mb-4 flex justify-between text-[10px]">
-                <span className="text-muted">过滤条件</span>
+                <span className="text-muted">
+                  过滤条件{live ? ` · 收盘 ${displayTime(lastSignalTime)}` : ""}
+                </span>
                 <span>
                   {
                     current.filters.filter((f) => f.enabled !== false && f.pass)
                       .length
                   }{" "}
                   / {current.filters.filter((f) => f.enabled !== false).length}{" "}
-                  已满足
+                  {paused ? "信号已暂停" : "已满足"}
                 </span>
               </div>
               <div className="space-y-4">
@@ -1364,13 +1476,17 @@ export default function Dashboard() {
               <Button
                 variant="outline"
                 className="mt-6 w-full text-xs"
+                disabled={live && (market.loading || market.retrySeconds > 0)}
                 onClick={() => {
-                  regenerate();
-                  setNotice("已重新生成一组模拟行情，并重新计算信号");
+                  if (live) market.refresh();
+                  else {
+                    regenerate();
+                    setNotice("已重新生成一组模拟行情，并重新计算信号");
+                  }
                 }}
               >
                 <RefreshCw size={13} />
-                重新生成模拟行情
+                {live ? "刷新币安行情" : "重新生成模拟行情"}
               </Button>
               <Link
                 href="/rules"
@@ -1485,18 +1601,22 @@ function CandleShape({
 export function PriceChart({
   data,
   showEma = true,
+  sourceLabel = "模拟数据",
 }: {
   data: CandleChartPoint[];
   showEma?: boolean;
+  sourceLabel?: string;
 }) {
   const candles = data.map((row) => ({ ...row, wick: [row.low, row.high] }));
   return (
     <div
       className="chart-box"
       role="img"
-      aria-label="模拟 1 分钟 OHLC 蜡烛 K 线和 EMA 均线图"
+      aria-label={`${sourceLabel} 1 分钟 OHLC 蜡烛 K 线和 EMA 均线图`}
     >
-      <div className="chart-watermark">SIMULATED</div>
+      <div className="chart-watermark">
+        {sourceLabel === "模拟数据" ? "SIMULATED" : "RESEARCH"}
+      </div>
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart
           data={candles}
@@ -1534,7 +1654,7 @@ export function PriceChart({
               return (
                 <div className="rounded-lg border border-border bg-card p-3 text-[11px] shadow-lg">
                   <p className="mb-2 text-muted">
-                    {displayTime(String(label))} · 模拟数据
+                    {displayTime(String(label))} · {sourceLabel}
                   </p>
                   {[
                     ["开", row.open],
@@ -1553,7 +1673,7 @@ export function PriceChart({
           />
           <Bar
             dataKey="wick"
-            name="模拟 K 线"
+            name={sourceLabel === "模拟数据" ? "模拟 K 线" : "币安 K 线"}
             isAnimationActive={false}
             shape={(props: unknown) => (
               <CandleShape {...(props as unknown as CandleShapeProps)} />
@@ -1777,7 +1897,7 @@ export default function Rules() {
           <div className="eyebrow">STRATEGY SETTINGS / 策略实验室</div>
           <h1 className="page-title">让每一个信号，有据可循。</h1>
           <p className="page-desc">
-            调整过滤条件，实时观察同一组模拟数据下的信号变化。
+            有效参数会同时应用到首页币安研究信号；此页使用模拟数据预览规则变化。
           </p>
         </div>
         <Badge className="mt-5">研究用途</Badge>
@@ -2287,7 +2407,7 @@ export default function Backtest() {
 
 ## 7. 模拟数据与简单信号计算逻辑
 
-确定性模拟 OHLCV、EMA、Wilder RSI、完整 5 分钟聚合、成交量过滤、趋势开关、回测与严格 CSV 校验。市场数据适配接口预留后续 HTTP/WebSocket 接入，当前没有真实行情请求或订单执行。
+确定性模拟 OHLCV、EMA、Wilder RSI、完整 5 分钟聚合、成交量过滤、趋势开关、回测与严格 CSV 校验。币安公开行情通过服务端固定域名接口接入，客户端每 15 秒检查已收盘数据；其他行情源仍可扩展，当前不接账户或订单执行。
 
 
 ### `lib/engine.ts`
@@ -2703,7 +2823,7 @@ export function displayDate(time: string) {
 ```ts
 import { simulate, type Candle } from "./engine";
 
-// Integration boundary: a future HTTP/WebSocket adapter must return continuous,
+// Integration boundary for additional HTTP/WebSocket adapters: return continuous,
 // validated 1-minute candles with ISO timezone-aware OPEN timestamps. Only closed
 // candles should be passed to analyze(); never expose an unfinished 5m candle.
 // Keep API credentials server-side in a Next.js route handler, not client bundles.
@@ -2721,6 +2841,508 @@ export const simulatedSource: MarketDataSource = {
     return simulate(seed, limit);
   },
 };
-// Future: implement a LiveMarketDataSource with the same interface and explicitly
-// change source labels after verifying actual exchange responses and timestamps.
+// Binance now has a dedicated server adapter in binance.ts and /api/market.
+// This interface remains available for other sources; production UI must always
+// distinguish actual exchange data, retained historical snapshots, and simulations.
+```
+
+### `components/market-controls.tsx`
+
+```tsx
+"use client";
+import { RefreshCw } from "lucide-react";
+import { useResearch } from "./provider";
+import { isMarketSymbol } from "@/lib/binance";
+import { Button } from "./ui/button";
+export function MarketControls() {
+  const { symbol, setSymbol, marketMode, setMarketMode, market } =
+    useResearch();
+  return (
+    <section
+      aria-label="行情来源与连接状态"
+      className="mb-5 rounded-xl border border-border bg-card p-4"
+    >
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-2 text-xs text-muted">
+          交易对
+          <select
+            aria-label="交易对"
+            value={symbol}
+            disabled={marketMode === "simulated"}
+            onChange={(e) => {
+              if (isMarketSymbol(e.target.value)) setSymbol(e.target.value);
+            }}
+            className="h-9 rounded-lg border border-border bg-background px-3 text-foreground"
+          >
+            <option value="BTCUSDT">BTC / USDT</option>
+            <option value="ETHUSDT">ETH / USDT</option>
+          </select>
+        </label>
+        <label className="flex items-center gap-2 text-xs text-muted">
+          数据源
+          <select
+            aria-label="数据源"
+            value={marketMode}
+            onChange={(e) =>
+              setMarketMode(e.target.value === "live" ? "live" : "simulated")
+            }
+            className="h-9 rounded-lg border border-border bg-background px-3 text-foreground"
+          >
+            <option value="live">币安实时行情</option>
+            <option value="simulated">模拟数据（练习）</option>
+          </select>
+        </label>
+        {marketMode === "live" && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={market.loading || market.retrySeconds > 0}
+            onClick={market.refresh}
+          >
+            <RefreshCw size={13} />
+            {market.retrySeconds > 0
+              ? `${market.retrySeconds}s 后重试`
+              : market.loading
+                ? "连接中…"
+                : "刷新行情"}
+          </Button>
+        )}
+        <span
+          data-testid="market-status"
+          className={`text-[11px] ${marketMode === "live" && !market.healthy ? "text-[#d0b888]" : "text-positive"}`}
+        >
+          {marketMode === "simulated"
+            ? "模拟演示 · 非真实市场"
+            : market.healthy
+              ? "币安已连接 · 研究用途"
+              : market.loading
+                ? "正在连接币安，信号暂未启用"
+                : "行情不可用 · 实时信号已暂停"}
+        </span>
+      </div>
+      <p className="mt-3 text-[10px] leading-5 text-muted">
+        {marketMode === "simulated"
+          ? "此模式仅用于练习；切换至币安实时行情后才会请求真实市场数据。"
+          : `每 15 秒检查一次，仅用已收盘的 1 分钟 K 线计算；价格为最近收盘价，不是逐笔报价。${market.receivedAt ? `最近更新 ${new Date(market.receivedAt).toLocaleTimeString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false })}（UTC+8）。` : ""}`}
+      </p>
+      {marketMode === "live" && market.error && (
+        <p role="alert" className="mt-2 text-xs leading-5 text-negative">
+          {market.error}。不会自动改用模拟数据。
+        </p>
+      )}
+      {marketMode === "live" &&
+        market.snapshot &&
+        !market.error &&
+        !market.healthy &&
+        !market.loading && (
+          <p role="alert" className="mt-2 text-xs text-negative">
+            行情超过 2 分钟未更新，实时信号已暂停。
+          </p>
+        )}
+    </section>
+  );
+}
+```
+
+### `lib/binance.ts`
+
+```ts
+import type { Candle } from "./engine";
+
+export const SYMBOLS = ["BTCUSDT", "ETHUSDT"] as const;
+export type MarketSymbol = (typeof SYMBOLS)[number];
+export const MAX_MARKET_AGE_MS = 120_000;
+export const MARKET_POLL_MS = 15_000;
+export type MarketSnapshot = {
+  source: "binance";
+  symbol: MarketSymbol;
+  interval: "1m";
+  candles: Candle[];
+  serverTime: number;
+  fetchedAt: number;
+  ageMs: number;
+};
+export function isMarketSymbol(value: unknown): value is MarketSymbol {
+  return typeof value === "string" && SYMBOLS.includes(value as MarketSymbol);
+}
+export class MarketError extends Error {
+  constructor(
+    message: string,
+    public status = 502,
+    public retryAfter = 15,
+  ) {
+    super(message);
+  }
+}
+export function decodeBinanceKlines(
+  value: unknown,
+  serverTime: number,
+): Candle[] {
+  if (
+    !Number.isSafeInteger(serverTime) ||
+    serverTime <= 0 ||
+    !Array.isArray(value)
+  )
+    throw new MarketError("币安行情响应格式无效");
+  const candles: Candle[] = [];
+  for (const raw of value) {
+    if (!Array.isArray(raw) || raw.length < 7)
+      throw new MarketError("币安 K 线格式无效");
+    const [time, o, h, l, c, v, closeTime] = raw;
+    if (
+      !Number.isSafeInteger(time) ||
+      time <= 0 ||
+      time % 60000 !== 0 ||
+      closeTime !== time + 59999
+    )
+      throw new MarketError("币安 K 线时间无效");
+    if (closeTime >= serverTime) continue; // Never compute signals from an unfinished bar.
+    const numbers = [o, h, l, c, v].map((n) =>
+      typeof n === "number" || (typeof n === "string" && n.trim() !== "")
+        ? Number(n)
+        : NaN,
+    );
+    const [open, high, low, close, volume] = numbers;
+    if (
+      numbers.some((n) => !Number.isFinite(n)) ||
+      Math.min(open, high, low, close) <= 0 ||
+      volume < 0 ||
+      high < Math.max(open, close) ||
+      low > Math.min(open, close) ||
+      low > high
+    )
+      throw new MarketError("币安 OHLCV 数值无效");
+    if (
+      candles.length &&
+      time - Date.parse(candles[candles.length - 1].datetime) !== 60000
+    )
+      throw new MarketError("币安 K 线存在缺失或重复，请稍后重试");
+    candles.push({
+      datetime: new Date(time).toISOString(),
+      open,
+      high,
+      low,
+      close,
+      volume,
+    });
+  }
+  if (candles.length < 120)
+    throw new MarketError("币安已收盘 K 线不足，暂停研究信号");
+  const age =
+    serverTime - (Date.parse(candles[candles.length - 1].datetime) + 60000);
+  if (age < 0 || age > MAX_MARKET_AGE_MS)
+    throw new MarketError("币安行情已过期，暂停研究信号");
+  return candles;
+}
+
+// Public market-data-only endpoint documented by Binance. No account or trading key.
+// The hostname, interval and maximum count are fixed, and symbols are allowlisted.
+export async function fetchBinanceMarket(
+  symbol: MarketSymbol,
+  fetcher: typeof fetch = fetch,
+): Promise<Omit<MarketSnapshot, "ageMs">> {
+  if (!isMarketSymbol(symbol))
+    throw new MarketError("仅支持 BTCUSDT 和 ETHUSDT", 400);
+  const get = async (path: string): Promise<unknown> => {
+    let response: Response;
+    try {
+      response = await fetcher(
+        "https://data-api.binance.vision/api/v3/" + path,
+        {
+          cache: "no-store",
+          redirect: "error",
+          signal: AbortSignal.timeout(8000),
+        },
+      );
+    } catch {
+      throw new MarketError("无法连接币安公开行情，请稍后重试；实时信号已暂停");
+    }
+    if (response.status === 429 || response.status === 418) {
+      const retry = Number(response.headers.get("Retry-After"));
+      throw new MarketError(
+        "币安请求限流，等待后自动重试",
+        429,
+        Number.isFinite(retry) && retry > 0 ? Math.min(retry, 3600) : 60,
+      );
+    }
+    if (response.status === 451 || response.status === 403)
+      throw new MarketError(
+        "当前部署区域无法访问币安公开行情；实时信号已暂停",
+        503,
+        60,
+      );
+    if (!response.ok) throw new MarketError("币安行情服务暂时不可用", 502);
+    try {
+      return await response.json();
+    } catch {
+      throw new MarketError("币安行情返回了无效 JSON");
+    }
+  };
+  const requestedAt = Date.now();
+  const [clock, raw] = await Promise.all([
+    get("time"),
+    get(`klines?symbol=${symbol}&interval=1m&limit=1000`),
+  ]);
+  const serverTime =
+    typeof clock === "object" && clock !== null && "serverTime" in clock
+      ? Number(clock.serverTime)
+      : NaN;
+  const candles = decodeBinanceKlines(raw, serverTime);
+  return {
+    source: "binance",
+    symbol,
+    interval: "1m",
+    candles,
+    serverTime,
+    fetchedAt: requestedAt,
+  };
+}
+```
+
+### `lib/use-market.ts`
+
+```ts
+"use client";
+import { useEffect, useState } from "react";
+import {
+  decodeBinanceKlines,
+  MAX_MARKET_AGE_MS,
+  MARKET_POLL_MS,
+  type MarketSnapshot,
+  type MarketSymbol,
+} from "./binance";
+
+export function readMarketSnapshot(
+  body: unknown,
+  symbol: MarketSymbol,
+): MarketSnapshot {
+  const data = body as MarketSnapshot;
+  if (
+    !data ||
+    data.source !== "binance" ||
+    data.symbol !== symbol ||
+    data.interval !== "1m" ||
+    !Array.isArray(data.candles) ||
+    !Number.isFinite(data.ageMs) ||
+    data.ageMs < 0 ||
+    data.ageMs > MAX_MARKET_AGE_MS ||
+    !Number.isFinite(data.fetchedAt)
+  )
+    throw new Error("行情数据格式或时效无效，实时信号已暂停");
+  const candles = decodeBinanceKlines(
+    data.candles.map((r) => [
+      Date.parse(r.datetime),
+      r.open,
+      r.high,
+      r.low,
+      r.close,
+      r.volume,
+      Date.parse(r.datetime) + 59999,
+    ]),
+    data.serverTime,
+  );
+  return { ...data, candles };
+}
+export function useBinanceMarket(symbol: MarketSymbol, enabled: boolean) {
+  const [revision, setRevision] = useState(0);
+  const [now, setNow] = useState(Date.now);
+  const [state, setState] = useState<{
+    snapshot: MarketSnapshot | null;
+    receivedAt: number;
+    error: string | null;
+    loading: boolean;
+    retryAt: number;
+  }>({
+    snapshot: null,
+    receivedAt: 0,
+    error: null,
+    loading: false,
+    retryAt: 0,
+  });
+  useEffect(() => {
+    if (!enabled) return;
+    const tick = () => setNow(Date.now());
+    const timer = setInterval(tick, 1000);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [enabled]);
+  useEffect(() => {
+    if (!enabled) return;
+    let active = true;
+    let timer: ReturnType<typeof setTimeout>;
+    const controller = new AbortController();
+    setState((previous) =>
+      previous.snapshot?.symbol === symbol
+        ? { ...previous, loading: true }
+        : {
+            snapshot: null,
+            receivedAt: 0,
+            error: null,
+            loading: true,
+            retryAt: 0,
+          },
+    );
+    async function load() {
+      if (!active) return;
+      let delay = MARKET_POLL_MS;
+      setState((previous) => ({ ...previous, loading: true }));
+      try {
+        const response = await fetch(`/api/market?symbol=${symbol}`, {
+          cache: "no-store",
+          signal: AbortSignal.any([
+            controller.signal,
+            AbortSignal.timeout(12_000),
+          ]),
+        });
+        const body = await response.json();
+        if (!response.ok) {
+          const retry = Number(response.headers.get("Retry-After"));
+          if (Number.isFinite(retry) && retry > 0)
+            delay = Math.max(delay, Math.min(retry, 3600) * 1000);
+          throw new Error(
+            typeof body.error === "string" ? body.error : "行情服务暂时不可用",
+          );
+        }
+        const snapshot = readMarketSnapshot(body, symbol);
+        if (active) {
+          const receivedAt = Date.now();
+          setNow(receivedAt);
+          setState({
+            snapshot,
+            receivedAt,
+            error: null,
+            loading: false,
+            retryAt: 0,
+          });
+        }
+      } catch (error) {
+        if (active)
+          setState((previous) => ({
+            ...previous,
+            loading: false,
+            error:
+              error instanceof DOMException && error.name === "TimeoutError"
+                ? "行情请求超时，实时信号已暂停"
+                : error instanceof TypeError
+                  ? "无法连接行情服务，实时信号已暂停"
+                  : error instanceof Error
+                    ? error.message
+                    : "行情连接失败，实时信号已暂停",
+            retryAt: Date.now() + delay,
+          }));
+      } finally {
+        if (active) timer = setTimeout(load, delay);
+      }
+    }
+    void load();
+    return () => {
+      active = false;
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [symbol, enabled, revision]);
+  const snapshot = state.snapshot?.symbol === symbol ? state.snapshot : null;
+  const ageMs = snapshot
+    ? snapshot.ageMs + Math.max(0, Math.max(now, Date.now()) - state.receivedAt)
+    : Infinity;
+  const healthy =
+    enabled && !!snapshot && !state.error && ageMs <= MAX_MARKET_AGE_MS;
+  return {
+    snapshot,
+    healthy,
+    ageMs,
+    loading: state.loading,
+    error: state.error,
+    receivedAt: snapshot ? state.receivedAt : 0,
+    retrySeconds: Math.max(0, Math.ceil((state.retryAt - now) / 1000)),
+    refresh: () => {
+      if (Date.now() >= state.retryAt) setRevision((n) => n + 1);
+    },
+  };
+}
+```
+
+### `app/api/market/route.ts`
+
+```ts
+import { NextRequest, NextResponse } from "next/server";
+import {
+  fetchBinanceMarket,
+  isMarketSymbol,
+  MarketError,
+  MAX_MARKET_AGE_MS,
+  type MarketSymbol,
+} from "@/lib/binance";
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+type Snapshot = Awaited<ReturnType<typeof fetchBinanceMarket>>;
+// Per-process, bounded to two symbols; coalesce concurrent requests and honor cooldowns.
+const cache = new Map<
+  MarketSymbol,
+  {
+    data?: Snapshot;
+    pending?: Promise<Snapshot>;
+    blockedUntil?: number;
+    error?: MarketError;
+  }
+>();
+export async function GET(request: NextRequest) {
+  const symbol = request.nextUrl.searchParams.get("symbol") ?? "BTCUSDT";
+  if (!isMarketSymbol(symbol))
+    return NextResponse.json(
+      { error: "仅支持 BTCUSDT 和 ETHUSDT" },
+      { status: 400 },
+    );
+  const entry = cache.get(symbol) ?? {};
+  cache.set(symbol, entry);
+  try {
+    if (entry.blockedUntil && entry.blockedUntil > Date.now())
+      throw new MarketError(
+        entry.error?.message ?? "请稍后重试",
+        entry.error?.status ?? 503,
+        Math.ceil((entry.blockedUntil - Date.now()) / 1000),
+      );
+    let data = entry.data;
+    if (!data || Date.now() - data.fetchedAt >= 10_000) {
+      entry.pending ??= fetchBinanceMarket(symbol);
+      try {
+        data = await entry.pending;
+        entry.data = data;
+      } finally {
+        entry.pending = undefined;
+      }
+    }
+    const lastClosedAt =
+      Date.parse(data.candles[data.candles.length - 1].datetime) + 60000;
+    const ageMs =
+      data.serverTime - lastClosedAt + Math.max(0, Date.now() - data.fetchedAt);
+    if (ageMs > MAX_MARKET_AGE_MS)
+      throw new MarketError("行情已过期，暂停研究信号");
+    return NextResponse.json(
+      { ...data, ageMs },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  } catch (error) {
+    const failure =
+      error instanceof MarketError
+        ? error
+        : new MarketError("行情暂时不可用，实时信号已暂停");
+    entry.data = undefined;
+    entry.error = failure;
+    entry.blockedUntil = Date.now() + failure.retryAfter * 1000;
+    return NextResponse.json(
+      { error: failure.message },
+      {
+        status: failure.status,
+        headers: {
+          "Cache-Control": "no-store",
+          "Retry-After": String(failure.retryAfter),
+        },
+      },
+    );
+  }
+}
 ```

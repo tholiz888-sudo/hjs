@@ -1,6 +1,6 @@
 import { simulate, type Candle } from "./engine";
 
-// Integration boundary: a future HTTP/WebSocket adapter must return continuous,
+// Integration boundary for additional HTTP/WebSocket adapters: return continuous,
 // validated 1-minute candles with ISO timezone-aware OPEN timestamps. Only closed
 // candles should be passed to analyze(); never expose an unfinished 5m candle.
 // Keep API credentials server-side in a Next.js route handler, not client bundles.
@@ -18,5 +18,6 @@ export const simulatedSource: MarketDataSource = {
     return simulate(seed, limit);
   },
 };
-// Future: implement a LiveMarketDataSource with the same interface and explicitly
-// change source labels after verifying actual exchange responses and timestamps.
+// Binance now has a dedicated server adapter in binance.ts and /api/market.
+// This interface remains available for other sources; production UI must always
+// distinguish actual exchange data, retained historical snapshots, and simulations.

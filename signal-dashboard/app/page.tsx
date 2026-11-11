@@ -25,22 +25,61 @@ import {
   displayDate,
   displayTime,
   labels,
-  simulate,
+  type Candle,
 } from "@/lib/engine";
 import { price, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MarketControls } from "@/components/market-controls";
 import { PriceChart } from "@/components/charts";
 export default function Dashboard() {
-  const { params, rows, regenerate } = useResearch();
+  const { rows: simulatedRows, marketMode, market } = useResearch();
+  const rows =
+    marketMode === "live" ? (market.snapshot?.candles ?? []) : simulatedRows;
+  if (!rows.length)
+    return (
+      <>
+        <section className="section-heading">
+          <div>
+            <div className="eyebrow">BINANCE / 币安公开行情</div>
+            <h1 className="page-title">10 分钟方向研究</h1>
+            <p className="page-desc">
+              选择 BTC 或 ETH，使用真实已收盘 K 线计算研究信号。
+            </p>
+          </div>
+        </section>
+        <MarketControls />
+        <Card>
+          <CardContent className="py-12 text-center">
+            <h2 className="text-3xl text-muted">
+              {market.loading ? "正在加载行情" : "实时信号暂停"}
+            </h2>
+            <p className="mt-4 text-xs text-muted">
+              尚无可验证的币安行情，不显示价格、方向建议或胜率。可等待自动重试，或明确选择模拟数据练习。
+            </p>
+          </CardContent>
+        </Card>
+      </>
+    );
+  return <DashboardContent rows={rows} />;
+}
+function DashboardContent({ rows }: { rows: Candle[] }) {
+  const { params, regenerate, marketMode, symbol, market } = useResearch();
+  const live = marketMode === "live";
+  const paused = live && !market.healthy;
+  const sourceLabel = live ? "币安行情 · 研究用途" : "模拟数据";
   const [range, setRange] = useState(60);
   const [showEma, setShowEma] = useState(true);
   const [notice, setNotice] = useState("");
   const signals = useMemo(() => analyze(rows, params), [rows, params]);
   const stats = useMemo(() => backtest(rows, params), [rows, params]);
-  const current = signals[signals.length - 1],
-    last = rows[rows.length - 1],
+  const latest = signals[signals.length - 1];
+  const current = paused
+    ? { ...latest, direction: "neutral" as const, filters: [] }
+    : latest;
+  const lastSignalTime = latest.time;
+  const last = rows[rows.length - 1],
     prior = rows[rows.length - 61];
   const change = (last.close / prior.close - 1) * 100;
   const recent = signals
@@ -55,8 +94,8 @@ export default function Dashboard() {
     high: r.high,
     low: r.low,
     close: r.close,
-    fast: signals[rows.length - range + i].fast,
-    slow: signals[rows.length - range + i].slow,
+    fast: signals[Math.max(0, rows.length - range) + i].fast,
+    slow: signals[Math.max(0, rows.length - range) + i].slow,
   }));
   const Icon =
     current.direction === "bullish"
@@ -68,7 +107,13 @@ export default function Dashboard() {
     const blob = new Blob(
       [
         JSON.stringify(
-          { source: "模拟数据 · 仅供研究学习", params, signal: current },
+          {
+            source: sourceLabel,
+            symbol: live ? symbol : "SIMULATED_BTCUSDT",
+            paused,
+            params,
+            signal: paused ? null : current,
+          },
           null,
           2,
         ),
@@ -81,7 +126,7 @@ export default function Dashboard() {
     a.download = "signal-research.json";
     a.click();
     URL.revokeObjectURL(url);
-    setNotice("模拟信号快照已导出");
+    setNotice("研究信号快照已导出");
   }
   return (
     <>
@@ -105,29 +150,32 @@ export default function Dashboard() {
           导出快照
         </Button>
       </section>
+      <MarketControls />
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-y border-border py-3">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f8a63c] text-lg font-bold text-[#3b2205]">
-            ₿
+            {live && symbol === "ETHUSDT" ? "Ξ" : "₿"}
           </div>
           <span className="font-semibold tracking-wide">
-            BTC <span className="text-muted">/ USDT</span>
+            {live ? symbol.replace("USDT", "") : "BTC"}{" "}
+            <span className="text-muted">/ USDT</span>
           </span>
-          <Badge>模拟市场</Badge>
+          <Badge>{sourceLabel}</Badge>
           <span className="hidden text-[11px] text-muted sm:inline">
             1 分钟 K 线 · 10 分钟观察窗
           </span>
         </div>
         <span className="flex items-center gap-2 text-[10px] text-muted">
           <Clock3 size={12} />
-          样本时间 {displayDate(last.datetime)} {displayTime(last.datetime)}{" "}
-          UTC+8
+          {live ? "最近收盘" : "样本时间"}{" "}
+          {displayDate(live ? lastSignalTime : last.datetime)}{" "}
+          {displayTime(live ? lastSignalTime : last.datetime)} UTC+8
         </span>
       </div>
       <div className="mb-5 grid grid-cols-2 gap-3 xl:grid-cols-4">
         {[
           {
-            label: "最新模拟价格",
+            label: live ? "币安最近收盘价" : "最新模拟价格",
             value: `$${price(last.close)}`,
             sub: `近 60 分钟 ${change >= 0 ? "+" : ""}${change.toFixed(2)}%`,
             color: change >= 0 ? "text-positive" : "text-negative",
@@ -159,7 +207,9 @@ export default function Dashboard() {
             <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <p className="metric-label">{m.label}</p>
-                <span className="data-label">模拟数据</span>
+                <span className="data-label">
+                  {live ? "研究用途" : "模拟数据"}
+                </span>
               </div>
               <div className="metric-value">{m.value}</div>
               <div
@@ -187,7 +237,7 @@ export default function Dashboard() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <CardTitle>1 分钟 K 线</CardTitle>
-                  <Badge>模拟数据</Badge>
+                  <Badge>{sourceLabel}</Badge>
                 </div>
                 <div className="flex gap-1 rounded-md bg-background p-1">
                   {[30, 60, 180].map((n) => (
@@ -221,12 +271,16 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent className="px-3 pb-3">
-              <PriceChart data={chart} showEma={showEma} />
+              <PriceChart
+                data={chart}
+                showEma={showEma}
+                sourceLabel={sourceLabel}
+              />
               <div className="mt-4 flex flex-wrap items-center justify-between gap-2 px-3">
                 <div className="flex gap-4 text-[10px] text-muted">
                   <span>
                     <i className="mr-1 inline-block h-0.5 w-3 bg-primary" />
-                    模拟 K 线
+                    {live ? "币安 K 线" : "模拟 K 线"}
                   </span>
                   <span>
                     <i className="mr-1 inline-block h-0.5 w-3 bg-[#76aee7]" />
@@ -305,7 +359,9 @@ export default function Dashboard() {
               </table>
             </div>
             <p className="px-5 py-3 text-[9px] text-muted">
-              仅展示收盘时触发的历史模拟信号，不代表实际成交或未来收益。
+              {live
+                ? "仅展示币安历史已收盘数据触发的研究信号；连接异常时保留历史快照，不代表当前可交易。"
+                : "仅展示收盘时触发的历史模拟信号，不代表实际成交或未来收益。"}
             </p>
           </Card>
         </div>
@@ -323,7 +379,9 @@ export default function Dashboard() {
             <CardHeader>
               <div className="flex justify-between">
                 <CardTitle>当前方向信号</CardTitle>
-                <Badge className="border-0 bg-white/5">模拟数据</Badge>
+                <Badge className="border-0 bg-white/5">
+                  {paused ? "暂停" : sourceLabel}
+                </Badge>
               </div>
             </CardHeader>
             <CardContent>
@@ -338,34 +396,40 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <div className="text-[35px] font-semibold tracking-tight">
-                    {labels[current.direction]}
+                    {paused ? "暂停" : labels[current.direction]}
                   </div>
                   <div className="mt-1 text-[9px] tracking-[.18em]">
-                    {current.direction === "neutral"
-                      ? "WAIT FOR CONFIRMATION"
-                      : current.direction === "bullish"
-                        ? "BULLISH SIGNAL"
-                        : "BEARISH SIGNAL"}
+                    {paused
+                      ? "DATA UNAVAILABLE"
+                      : current.direction === "neutral"
+                        ? "WAIT FOR CONFIRMATION"
+                        : current.direction === "bullish"
+                          ? "BULLISH SIGNAL"
+                          : "BEARISH SIGNAL"}
                   </div>
                 </div>
               </div>
               <p className="text-[11px] leading-6 text-muted">
-                {current.direction === "neutral"
-                  ? "过滤条件尚未全部满足，等待趋势与交叉形成共振。保持观望也是研究的一部分。"
-                  : params.trendEnabled
-                    ? "趋势方向与均线交叉一致，RSI 和成交量过滤均已通过。下一根开盘起观察 10 分钟。"
-                    : "趋势过滤已关闭；均线交叉、RSI 和成交量过滤通过。下一根开盘起观察 10 分钟。"}
+                {paused
+                  ? "行情连接异常或数据已过期，暂停当前研究信号。下方图表仅为最后成功获取的历史数据。"
+                  : current.direction === "neutral"
+                    ? "过滤条件尚未全部满足，等待趋势与交叉形成共振。保持观望也是研究的一部分。"
+                    : params.trendEnabled
+                      ? "趋势方向与均线交叉一致，RSI 和成交量过滤均已通过。下一根开盘起观察 10 分钟。"
+                      : "趋势过滤已关闭；均线交叉、RSI 和成交量过滤通过。下一根开盘起观察 10 分钟。"}
               </p>
               <div className="my-5 border-t border-border" />
               <div className="mb-4 flex justify-between text-[10px]">
-                <span className="text-muted">过滤条件</span>
+                <span className="text-muted">
+                  过滤条件{live ? ` · 收盘 ${displayTime(lastSignalTime)}` : ""}
+                </span>
                 <span>
                   {
                     current.filters.filter((f) => f.enabled !== false && f.pass)
                       .length
                   }{" "}
                   / {current.filters.filter((f) => f.enabled !== false).length}{" "}
-                  已满足
+                  {paused ? "信号已暂停" : "已满足"}
                 </span>
               </div>
               <div className="space-y-4">
@@ -397,13 +461,17 @@ export default function Dashboard() {
               <Button
                 variant="outline"
                 className="mt-6 w-full text-xs"
+                disabled={live && (market.loading || market.retrySeconds > 0)}
                 onClick={() => {
-                  regenerate();
-                  setNotice("已重新生成一组模拟行情，并重新计算信号");
+                  if (live) market.refresh();
+                  else {
+                    regenerate();
+                    setNotice("已重新生成一组模拟行情，并重新计算信号");
+                  }
                 }}
               >
                 <RefreshCw size={13} />
-                重新生成模拟行情
+                {live ? "刷新币安行情" : "重新生成模拟行情"}
               </Button>
               <Link
                 href="/rules"

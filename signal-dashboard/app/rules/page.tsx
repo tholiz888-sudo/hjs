@@ -120,7 +120,7 @@ export default function Rules() {
           <div className="eyebrow">STRATEGY SETTINGS / 策略实验室</div>
           <h1 className="page-title">让每一个信号，有据可循。</h1>
           <p className="page-desc">
-            调整过滤条件，实时观察同一组模拟数据下的信号变化。
+            有效参数会同时应用到首页币安研究信号；此页使用模拟数据预览规则变化。
           </p>
         </div>
         <Badge className="mt-5">研究用途</Badge>

@@ -11,12 +11,23 @@ const toCsv = (rows: Candle[]) =>
     )
     .join("\n");
 
+test.beforeEach(async ({ page }) => {
+  await page.route("**/api/market?*", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "测试环境未连接外部行情" }),
+    }),
+  );
+});
+
 test("dashboard draws candles and supports chart controls", async ({
   page,
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
+  await page.getByLabel("数据源", { exact: true }).selectOption("simulated");
   await expect(page.locator(".recharts-bar-rectangle")).toHaveCount(60);
   await expect(page.locator("tbody tr")).toHaveCount(20);
   await page.getByRole("button", { name: "30 分钟", exact: true }).click();
@@ -32,13 +43,11 @@ test("uploaded CSV survives navigation to change strategy parameters", async ({
   page,
 }) => {
   await page.goto("/backtest");
-  await page
-    .getByLabel("上传 OHLCV CSV 文件")
-    .setInputFiles({
-      name: "study.csv",
-      mimeType: "text/csv",
-      buffer: Buffer.from(toCsv(simulate(42, 720))),
-    });
+  await page.getByLabel("上传 OHLCV CSV 文件").setInputFiles({
+    name: "study.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(toCsv(simulate(42, 720))),
+  });
   await expect(page.locator("main [role=status]")).toContainText("study.csv");
   await page
     .locator(".sidebar")
@@ -123,13 +132,11 @@ test("capital exhaustion is displayed and no further trades are simulated", asyn
       : r,
   );
   await page.goto("/backtest");
-  await page
-    .getByLabel("上传 OHLCV CSV 文件")
-    .setInputFiles({
-      name: "stress.csv",
-      mimeType: "text/csv",
-      buffer: Buffer.from(toCsv(stressed)),
-    });
+  await page.getByLabel("上传 OHLCV CSV 文件").setInputFiles({
+    name: "stress.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(toCsv(stressed)),
+  });
   await expect(page.locator("p[role=alert]")).toContainText(
     "模拟本金已耗尽，回测已停止",
   );

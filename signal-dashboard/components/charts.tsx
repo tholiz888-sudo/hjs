@@ -64,18 +64,22 @@ function CandleShape({
 export function PriceChart({
   data,
   showEma = true,
+  sourceLabel = "模拟数据",
 }: {
   data: CandleChartPoint[];
   showEma?: boolean;
+  sourceLabel?: string;
 }) {
   const candles = data.map((row) => ({ ...row, wick: [row.low, row.high] }));
   return (
     <div
       className="chart-box"
       role="img"
-      aria-label="模拟 1 分钟 OHLC 蜡烛 K 线和 EMA 均线图"
+      aria-label={`${sourceLabel} 1 分钟 OHLC 蜡烛 K 线和 EMA 均线图`}
     >
-      <div className="chart-watermark">SIMULATED</div>
+      <div className="chart-watermark">
+        {sourceLabel === "模拟数据" ? "SIMULATED" : "RESEARCH"}
+      </div>
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart
           data={candles}
@@ -113,7 +117,7 @@ export function PriceChart({
               return (
                 <div className="rounded-lg border border-border bg-card p-3 text-[11px] shadow-lg">
                   <p className="mb-2 text-muted">
-                    {displayTime(String(label))} · 模拟数据
+                    {displayTime(String(label))} · {sourceLabel}
                   </p>
                   {[
                     ["开", row.open],
@@ -132,7 +136,7 @@ export function PriceChart({
           />
           <Bar
             dataKey="wick"
-            name="模拟 K 线"
+            name={sourceLabel === "模拟数据" ? "模拟 K 线" : "币安 K 线"}
             isAnimationActive={false}
             shape={(props: unknown) => (
               <CandleShape {...(props as unknown as CandleShapeProps)} />

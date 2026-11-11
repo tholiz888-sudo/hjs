@@ -11,6 +11,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useResearch } from "./provider";
 const disclaimer =
   "仅供研究学习，不构成任何投资建议。历史表现不代表未来结果，交易有风险，请谨慎决策。";
 const links = [
@@ -20,6 +21,13 @@ const links = [
 ];
 export function Shell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
+  const { marketMode, market } = useResearch();
+  const statusLabel =
+    marketMode === "simulated"
+      ? "模拟演示环境"
+      : market.healthy
+        ? "币安行情已连接"
+        : "币安行情连接中或暂停";
   return (
     <>
       <div className="risk-banner">
@@ -67,7 +75,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </p>
           <div className="mt-5 flex items-center gap-2 text-[10px] text-muted">
             <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-            本地模拟环境 <ArrowUpRight size={12} />
+            {statusLabel} <ArrowUpRight size={12} />
           </div>
         </div>
         <div className="sidebar-bottom">
@@ -86,7 +94,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-2 text-[11px] text-muted">
               <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-              模拟引擎就绪
+              {statusLabel}
             </span>
             <span className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-white/5 text-[10px]">
               SL
@@ -110,7 +118,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             {disclaimer}
           </p>
           <span>© 2026 SIGNAL LAB · 研究与教育用途</span>
-          <span>所有信号均由模拟数据生成 · UTC+8</span>
+          <span>首页行情来源可切换；回测均为研究用途 · UTC+8</span>
         </footer>
       </div>
     </>
