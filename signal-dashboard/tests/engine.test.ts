@@ -82,3 +82,35 @@ test("invalid parameter relationships are rejected", () => {
   assert.ok(validateParams({ ...defaults, trend: NaN }));
   assert.equal(validateParams(defaults), null);
 });
+
+test("disabled trend filtering allows valid early signals without 5m EMA warmup", () => {
+  const rows = simulate();
+  const relaxed = {
+    ...defaults,
+    rsiMin: 0,
+    rsiMax: 100,
+    volumeMultiplier: 0.5,
+  };
+  const enabled = analyze(rows, relaxed);
+  const disabled = analyze(rows, { ...relaxed, trendEnabled: false });
+  assert.ok(enabled.slice(0, 99).every((s) => s.direction === "neutral"));
+  assert.ok(disabled.slice(20, 99).some((s) => s.direction !== "neutral"));
+  assert.deepEqual(
+    analyze(rows.slice(0, 287), { ...relaxed, trendEnabled: false }),
+    disabled.slice(0, 287),
+  );
+  assert.ok(disabled.every((s) => s.filters[0].enabled === false));
+});
+
+test("maximum consecutive losses matches the completed trade sequence", () => {
+  const result = backtest(simulate(), { ...defaults, trendEnabled: false });
+  let streak = 0,
+    maximum = 0;
+  for (const t of result.trades) {
+    streak = t.returnPct < 0 ? streak + 1 : 0;
+    maximum = Math.max(maximum, streak);
+  }
+  assert.ok(maximum > 0);
+  assert.equal(result.maxConsecutiveLosses, maximum);
+  assert.equal(backtest([], defaults).maxConsecutiveLosses, 0);
+});

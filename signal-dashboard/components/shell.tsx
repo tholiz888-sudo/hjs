@@ -11,6 +11,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+const disclaimer =
+  "仅供研究学习，不构成任何投资建议。历史表现不代表未来结果，交易有风险，请谨慎决策。";
 const links = [
   { href: "/", title: "信号仪表盘", icon: LayoutDashboard },
   { href: "/rules", title: "规则与参数", icon: Settings2 },
@@ -22,7 +24,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     <>
       <div className="risk-banner">
         <ShieldCheck size={13} className="shrink-0" />
-        <span>仅供研究学习，不构成任何投资建议，过去表现不代表未来结果</span>
+        <span>{disclaimer}</span>
         <span className="ml-auto hidden whitespace-nowrap text-[#c5ad79] md:block">
           RESEARCH ONLY
         </span>
@@ -104,6 +106,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </nav>
         <main>{children}</main>
         <footer>
+          <p className="w-full rounded-lg border border-[#453921] bg-[#272219] p-3 text-[11px] leading-6 text-[#d0b888]">
+            {disclaimer}
+          </p>
           <span>© 2026 SIGNAL LAB · 研究与教育用途</span>
           <span>所有信号均由模拟数据生成 · UTC+8</span>
         </footer>

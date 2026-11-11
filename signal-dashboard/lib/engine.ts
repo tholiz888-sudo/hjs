@@ -8,6 +8,7 @@ export type Candle = {
 };
 export type Params = {
   trend: number;
+  trendEnabled: boolean;
   fast: number;
   slow: number;
   rsi: number;
@@ -18,6 +19,7 @@ export type Params = {
 };
 export const defaults: Params = {
   trend: 20,
+  trendEnabled: true,
   fast: 3,
   slow: 8,
   rsi: 7,
@@ -32,7 +34,12 @@ export const labels: Record<Direction, string> = {
   bearish: "看跌",
   neutral: "观望",
 };
-export type Filter = { name: string; detail: string; pass: boolean };
+export type Filter = {
+  name: string;
+  detail: string;
+  pass: boolean;
+  enabled?: boolean;
+};
 export type Signal = {
   direction: Direction;
   filters: Filter[];
@@ -45,6 +52,7 @@ export type Signal = {
   ready: boolean;
 };
 export function validateParams(p: Params): string | null {
+  if (typeof p.trendEnabled !== "boolean") return "趋势过滤开关必须为布尔值";
   const periods = [p.trend, p.fast, p.slow, p.rsi, p.volumePeriod];
   if (periods.some((n) => !Number.isInteger(n) || n < 2 || n > 100))
     return "指标周期必须为 2–100 的整数";
@@ -141,10 +149,9 @@ export function analyze(rows: Candle[], p: Params = defaults): Signal[] {
   return rows.map((row, i) => {
     while (cursor + 1 < completed.length && completed[cursor + 1].end <= i)
       cursor++;
-    const t = cursor >= 0 ? trends[cursor] : 0,
-      prev = cursor > 0 ? trends[cursor - 1] : t;
-    const up = cursor >= p.trend - 1 && row.close > t && t > prev,
-      down = cursor >= p.trend - 1 && row.close < t && t < prev;
+    const t = cursor >= 0 ? trends[cursor] : 0;
+    const up = cursor >= p.trend - 1 && row.close > t,
+      down = cursor >= p.trend - 1 && row.close < t;
     const crossUp = i > 0 && fast[i] > slow[i] && fast[i - 1] <= slow[i - 1],
       crossDown = i > 0 && fast[i] < slow[i] && fast[i - 1] >= slow[i - 1];
     const avg =
@@ -156,11 +163,12 @@ export function analyze(rows: Candle[], p: Params = defaults): Signal[] {
       okRsi = rs[i] >= p.rsiMin && rs[i] <= p.rsiMax,
       okVol = ratio > p.volumeMultiplier;
     const ready =
-      cursor >= p.trend - 1 && i >= Math.max(p.slow, p.rsi, p.volumePeriod);
+      (!p.trendEnabled || cursor >= p.trend - 1) &&
+      i >= Math.max(p.slow, p.rsi, p.volumePeriod);
     const direction: Direction =
-      ready && up && crossUp && okRsi && okVol
+      ready && (!p.trendEnabled || up) && crossUp && okRsi && okVol
         ? "bullish"
-        : ready && down && crossDown && okRsi && okVol
+        : ready && (!p.trendEnabled || down) && crossDown && okRsi && okVol
           ? "bearish"
           : "neutral";
     return {
@@ -175,12 +183,15 @@ export function analyze(rows: Candle[], p: Params = defaults): Signal[] {
       filters: [
         {
           name: `5 分钟 EMA${p.trend} 趋势`,
-          detail: up
-            ? "价格高于均线，均线向上"
-            : down
-              ? "价格低于均线，均线向下"
-              : "趋势未形成或预热不足",
-          pass: up || down,
+          enabled: p.trendEnabled,
+          detail: !p.trendEnabled
+            ? "已关闭，不限制涨跌方向"
+            : up
+              ? "价格高于已收盘 5 分钟 EMA，只允许看涨"
+              : down
+                ? "价格低于已收盘 5 分钟 EMA，只允许看跌"
+                : "趋势未形成或预热不足",
+          pass: !p.trendEnabled || up || down,
         },
         {
           name: `1 分钟 EMA${p.fast} / EMA${p.slow}`,
@@ -219,7 +230,9 @@ export function backtest(rows: Candle[], p: Params = defaults) {
   const trades: Trade[] = [];
   let equity = 10000,
     peak = equity,
-    maxDrawdown = 0;
+    maxDrawdown = 0,
+    lossStreak = 0,
+    maxConsecutiveLosses = 0;
   const curve = [{ time: rows[0]?.datetime ?? "", equity, returnPct: 0 }];
   // Decision at closed candle i, entry at next open, exit after ten 1-minute bars. No overlapping trades.
   for (let i = 0; i + 10 < rows.length; i++) {
@@ -228,6 +241,8 @@ export function backtest(rows: Candle[], p: Params = defaults) {
     const entry = rows[i + 1].open,
       exit = rows[i + 10].close;
     const ret = (exit / entry - 1) * (s.direction === "bullish" ? 1 : -1);
+    lossStreak = ret < 0 ? lossStreak + 1 : 0;
+    maxConsecutiveLosses = Math.max(maxConsecutiveLosses, lossStreak);
     equity *= 1 + ret;
     peak = Math.max(peak, equity);
     maxDrawdown = Math.max(maxDrawdown, ((peak - equity) / peak) * 100);
@@ -260,6 +275,7 @@ export function backtest(rows: Candle[], p: Params = defaults) {
       ? trades.reduce((s, t) => s + t.returnPct, 0) / trades.length
       : 0,
     maxDrawdown,
+    maxConsecutiveLosses,
     returnPct: (equity / 10000 - 1) * 100,
   };
 }

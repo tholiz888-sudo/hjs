@@ -341,3 +341,27 @@ tbody tr:hover {
     font-size: 11px;
   }
 }
+
+/* Reserve the fixed notice height, including narrow-screen wrapped text. */
+:root {
+  --risk-height: 49px;
+}
+.risk-banner {
+  height: var(--risk-height);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.sidebar {
+  top: var(--risk-height);
+}
+.workspace {
+  padding-top: var(--risk-height);
+}
+@media (max-width: 767px) {
+  :root {
+    --risk-height: 72px;
+  }
+  .risk-banner {
+    font-size: 11px;
+  }
+}

@@ -33,12 +33,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PriceChart } from "@/components/charts";
 export default function Dashboard() {
-  const { params } = useResearch();
-  const [seed, setSeed] = useState(42);
+  const { params, rows, regenerate } = useResearch();
   const [range, setRange] = useState(60);
   const [showEma, setShowEma] = useState(true);
   const [notice, setNotice] = useState("");
-  const rows = useMemo(() => simulate(seed), [seed]);
   const signals = useMemo(() => analyze(rows, params), [rows, params]);
   const stats = useMemo(() => backtest(rows, params), [rows, params]);
   const current = signals[signals.length - 1],
@@ -48,16 +46,18 @@ export default function Dashboard() {
   const recent = signals
     .map((s, i) => ({ ...s, index: i }))
     .filter((s) => s.direction !== "neutral")
-    .slice(-5)
+    .slice(-20)
     .reverse();
-  const chart = rows
-    .slice(-range)
-    .map((r, i) => ({
-      time: r.datetime,
-      price: r.close,
-      fast: signals[rows.length - range + i].fast,
-      slow: signals[rows.length - range + i].slow,
-    }));
+  const chart = rows.slice(-range).map((r, i) => ({
+    time: r.datetime,
+    price: r.close,
+    open: r.open,
+    high: r.high,
+    low: r.low,
+    close: r.close,
+    fast: signals[rows.length - range + i].fast,
+    slow: signals[rows.length - range + i].slow,
+  }));
   const Icon =
     current.direction === "bullish"
       ? TrendingUp
@@ -143,7 +143,9 @@ export default function Dashboard() {
             value: String(
               signals.filter((s) => s.direction !== "neutral").length,
             ).padStart(2, "0"),
-            sub: "四项过滤条件共同确认",
+            sub: params.trendEnabled
+              ? "四项过滤条件共同确认"
+              : "趋势过滤关闭 · 三项条件确认",
             color: "text-muted",
           },
           {
@@ -184,7 +186,7 @@ export default function Dashboard() {
             <CardHeader>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <CardTitle>价格走势</CardTitle>
+                  <CardTitle>1 分钟 K 线</CardTitle>
                   <Badge>模拟数据</Badge>
                 </div>
                 <div className="flex gap-1 rounded-md bg-background p-1">
@@ -224,7 +226,7 @@ export default function Dashboard() {
                 <div className="flex gap-4 text-[10px] text-muted">
                   <span>
                     <i className="mr-1 inline-block h-0.5 w-3 bg-primary" />
-                    模拟价格
+                    模拟 K 线
                   </span>
                   <span>
                     <i className="mr-1 inline-block h-0.5 w-3 bg-[#76aee7]" />
@@ -251,7 +253,7 @@ export default function Dashboard() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <CardTitle>最近信号</CardTitle>
+                  <CardTitle>最近 20 条信号</CardTitle>
                   <Badge>研究用途</Badge>
                 </div>
                 <Link
@@ -262,9 +264,9 @@ export default function Dashboard() {
                 </Link>
               </div>
             </CardHeader>
-            <div className="table-scroll">
+            <div className="table-scroll max-h-[390px]">
               <table>
-                <thead>
+                <thead className="sticky top-0 z-10 bg-card">
                   <tr>
                     <th>触发时间 UTC+8</th>
                     <th>信号方向</th>
@@ -350,13 +352,20 @@ export default function Dashboard() {
               <p className="text-[11px] leading-6 text-muted">
                 {current.direction === "neutral"
                   ? "过滤条件尚未全部满足，等待趋势与交叉形成共振。保持观望也是研究的一部分。"
-                  : "趋势方向与均线交叉一致，RSI 和成交量过滤均已通过。下一根开盘起观察 10 分钟。"}
+                  : params.trendEnabled
+                    ? "趋势方向与均线交叉一致，RSI 和成交量过滤均已通过。下一根开盘起观察 10 分钟。"
+                    : "趋势过滤已关闭；均线交叉、RSI 和成交量过滤通过。下一根开盘起观察 10 分钟。"}
               </p>
               <div className="my-5 border-t border-border" />
               <div className="mb-4 flex justify-between text-[10px]">
                 <span className="text-muted">过滤条件</span>
                 <span>
-                  {current.filters.filter((f) => f.pass).length} / 4 已满足
+                  {
+                    current.filters.filter((f) => f.enabled !== false && f.pass)
+                      .length
+                  }{" "}
+                  / {current.filters.filter((f) => f.enabled !== false).length}{" "}
+                  已满足
                 </span>
               </div>
               <div className="space-y-4">
@@ -365,12 +374,16 @@ export default function Dashboard() {
                     <span
                       className={cn(
                         "mt-0.5 rounded-full p-0.5",
-                        f.pass
+                        f.enabled !== false && f.pass
                           ? "bg-positive/10 text-positive"
                           : "bg-white/5 text-muted",
                       )}
                     >
-                      {f.pass ? <Check size={11} /> : <Minus size={11} />}
+                      {f.enabled !== false && f.pass ? (
+                        <Check size={11} />
+                      ) : (
+                        <Minus size={11} />
+                      )}
                     </span>
                     <div>
                       <div className="text-[11px]">{f.name}</div>
@@ -385,7 +398,7 @@ export default function Dashboard() {
                 variant="outline"
                 className="mt-6 w-full text-xs"
                 onClick={() => {
-                  setSeed((s) => s + 1);
+                  regenerate();
                   setNotice("已重新生成一组模拟行情，并重新计算信号");
                 }}
               >

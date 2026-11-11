@@ -19,9 +19,10 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 const fields: {
-  key: keyof Params;
+  key: Exclude<keyof Params, "trendEnabled">;
   name: string;
   min: number;
   max: number;
@@ -104,9 +105,13 @@ export default function Rules() {
     [rows, draft, error],
   );
   const signal = signals.at(-1);
-  function update(key: keyof Params, value: number) {
-    setDraft((p) => ({ ...p, [key]: value }));
-    setSaved(false);
+  function update(key: keyof Params, value: number | boolean) {
+    const next = { ...draft, [key]: value };
+    setDraft(next);
+    if (!validateParams(next)) {
+      save(next);
+      setSaved(true);
+    } else setSaved(false);
   }
   return (
     <>
@@ -129,6 +134,21 @@ export default function Rules() {
             </div>
           </CardHeader>
           <CardContent>
+            <div className="mb-6 flex items-center justify-between gap-4 rounded-lg border border-border bg-background p-4">
+              <div>
+                <label htmlFor="trend-enabled" className="text-xs">
+                  启用 5 分钟趋势过滤
+                </label>
+                <p className="mt-2 text-[10px] text-muted">
+                  关闭后仅使用 EMA 交叉、RSI 与成交量条件；有效参数立即应用。
+                </p>
+              </div>
+              <Switch
+                id="trend-enabled"
+                checked={draft.trendEnabled}
+                onCheckedChange={(value) => update("trendEnabled", value)}
+              />
+            </div>
             <div className="grid gap-x-8 gap-y-7 pt-3 sm:grid-cols-2">
               {fields.map((f) => (
                 <div key={f.key}>
@@ -180,13 +200,14 @@ export default function Rules() {
                   }}
                 >
                   <Save size={14} />
-                  应用到仪表盘
+                  确认当前参数
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => {
                     setDraft(defaults);
-                    setSaved(false);
+                    save(defaults);
+                    setSaved(true);
                   }}
                 >
                   <RotateCcw size={14} />
@@ -194,7 +215,7 @@ export default function Rules() {
                 </Button>
                 {saved && (
                   <span role="status" className="text-xs text-positive">
-                    已应用并在本地保存
+                    有效参数已自动应用并保存
                   </span>
                 )}
               </div>
@@ -220,7 +241,7 @@ export default function Rules() {
                     ? "—"
                     : signals.filter((s) => s.direction !== "neutral").length}
                 </span>{" "}
-                次信号。预览随参数变化即时重算，保存后应用到其他页面。
+                次信号。预览随参数变化即时重算，有效修改即时应用到其他页面。
               </p>
               <Button asChild variant="outline" className="mt-5 w-full">
                 <Link href="/">
@@ -236,7 +257,7 @@ export default function Rules() {
             <CardContent>
               <ol className="space-y-5 text-xs">
                 {[
-                  "5 分钟趋势：价格在 EMA 上方且均线上升时只看涨，反向只看跌。",
+                  "5 分钟趋势：价格在已收盘 EMA 上方只看涨，下方只看跌；开关关闭时不限制方向。",
                   "1 分钟触发：快速 EMA 在当前收盘上穿或下穿慢速 EMA，方向须与趋势一致。",
                   "RSI 过滤：数值须在设置的上下限内（含边界）。",
                   "成交量确认：成交量须严格大于前 N 根均量 × 倍数。",

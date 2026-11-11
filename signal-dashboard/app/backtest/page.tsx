@@ -24,7 +24,8 @@ import { Button } from "@/components/ui/button";
 import { EquityChart } from "@/components/charts";
 export default function Backtest() {
   const { params, rows: sample } = useResearch();
-  const [rows, setRows] = useState<Candle[]>(sample);
+  const [customRows, setRows] = useState<Candle[] | null>(null);
+  const rows = customRows ?? sample;
   const [source, setSource] = useState("内置模拟数据");
   const [error, setError] = useState("");
   const [page, setPage] = useState(0);
@@ -114,7 +115,7 @@ export default function Backtest() {
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  setRows(sample);
+                  setRows(null);
                   setSource("内置模拟数据");
                   setPage(0);
                   setError("");
@@ -154,7 +155,7 @@ export default function Backtest() {
           </div>
         </CardContent>
       </Card>
-      <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mb-5 grid grid-cols-2 gap-3 xl:grid-cols-3">
         {[
           {
             title: "总交易次数",
@@ -170,6 +171,16 @@ export default function Backtest() {
             title: "平均每笔收益",
             value: result.total ? `${result.average.toFixed(3)}%` : "—",
             note: "无杠杆方向收益，不含交易成本",
+          },
+          {
+            title: "最大连续亏损",
+            value: result.total ? `${result.maxConsecutiveLosses} 笔` : "—",
+            note: "连续负收益笔数，持平或盈利中断计数",
+          },
+          {
+            title: "累计模拟收益",
+            value: result.total ? `${result.returnPct.toFixed(3)}%` : "—",
+            note: "初始模拟权益 10,000 · 全额复利",
           },
           {
             title: "最大回撤",
