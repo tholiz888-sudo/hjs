@@ -1,17 +1,40 @@
 "use client";
 import { RefreshCw } from "lucide-react";
 import { useResearch } from "./provider";
-import { isMarketSymbol } from "@/lib/binance";
+import { isMarketSymbol, isExchange, exchangeNames } from "@/lib/binance";
 import { Button } from "./ui/button";
 export function MarketControls() {
-  const { symbol, setSymbol, marketMode, setMarketMode, market } =
-    useResearch();
+  const {
+    symbol,
+    setSymbol,
+    marketMode,
+    setMarketMode,
+    market,
+    exchange,
+    setExchange,
+  } = useResearch();
+  const name = exchangeNames[exchange];
   return (
     <section
       aria-label="行情来源与连接状态"
       className="mb-5 rounded-xl border border-border bg-card p-4"
     >
       <div className="flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-2 text-xs text-muted">
+          交易所
+          <select
+            aria-label="交易所"
+            value={exchange}
+            disabled={marketMode === "simulated"}
+            onChange={(e) => {
+              if (isExchange(e.target.value)) setExchange(e.target.value);
+            }}
+            className="h-9 rounded-lg border border-border bg-background px-3 text-foreground"
+          >
+            <option value="binance">币安 Binance</option>
+            <option value="okx">OKX</option>
+          </select>
+        </label>
         <label className="flex items-center gap-2 text-xs text-muted">
           交易对
           <select
@@ -37,7 +60,7 @@ export function MarketControls() {
             }
             className="h-9 rounded-lg border border-border bg-background px-3 text-foreground"
           >
-            <option value="live">币安实时行情</option>
+            <option value="live">交易所实时行情</option>
             <option value="simulated">模拟数据（练习）</option>
           </select>
         </label>
@@ -63,15 +86,15 @@ export function MarketControls() {
           {marketMode === "simulated"
             ? "模拟演示 · 非真实市场"
             : market.healthy
-              ? "币安已连接 · 研究用途"
+              ? `${name}已连接 · 研究用途`
               : market.loading
-                ? "正在连接币安，信号暂未启用"
+                ? `正在连接${name}，信号暂未启用`
                 : "行情不可用 · 实时信号已暂停"}
         </span>
       </div>
       <p className="mt-3 text-[10px] leading-5 text-muted">
         {marketMode === "simulated"
-          ? "此模式仅用于练习；切换至币安实时行情后才会请求真实市场数据。"
+          ? "此模式仅用于练习；切换至交易所实时行情后才会请求真实市场数据。"
           : `每 15 秒检查一次，仅用已收盘的 1 分钟 K 线计算；价格为最近收盘价，不是逐笔报价。${market.receivedAt ? `最近更新 ${new Date(market.receivedAt).toLocaleTimeString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false })}（UTC+8）。` : ""}`}
       </p>
       {marketMode === "live" && market.error && (

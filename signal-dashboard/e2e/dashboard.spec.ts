@@ -30,7 +30,7 @@ test("dashboard draws candles and supports chart controls", async ({
   await page.getByLabel("数据源", { exact: true }).selectOption("simulated");
   await expect(page.locator(".recharts-bar-rectangle")).toHaveCount(60);
   await expect(page.locator("tbody tr")).toHaveCount(20);
-  await page.getByRole("button", { name: "30 分钟", exact: true }).click();
+  await page.getByRole("button", { name: "30 根", exact: true }).click();
   await expect(page.locator(".recharts-bar-rectangle")).toHaveCount(30);
   await page.getByLabel("显示均线").uncheck();
   await expect(page.locator(".recharts-line")).toHaveCount(0);

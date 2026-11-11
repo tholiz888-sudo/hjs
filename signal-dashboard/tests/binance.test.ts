@@ -154,6 +154,13 @@ test("API rejects arbitrary symbols, coalesces BTC requests and observes ETH coo
   );
   assert.equal(invalid.status, 400);
   assert.equal(calls, 0);
+  for (const query of ["exchange=unknown", "interval=7m"]) {
+    const response = await GET(
+      new NextRequest("http://localhost/api/market?" + query),
+    );
+    assert.equal(response.status, 400);
+    assert.equal(calls, 0);
+  }
   const result = await Promise.all([
     GET(new NextRequest("http://localhost/api/market?symbol=BTCUSDT")),
     GET(new NextRequest("http://localhost/api/market?symbol=BTCUSDT")),

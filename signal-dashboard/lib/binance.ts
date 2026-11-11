@@ -1,33 +1,20 @@
 import type { Candle } from "./engine";
 
-export const SYMBOLS = ["BTCUSDT", "ETHUSDT"] as const;
-export type MarketSymbol = (typeof SYMBOLS)[number];
-export const MAX_MARKET_AGE_MS = 120_000;
-export const MARKET_POLL_MS = 15_000;
-export type MarketSnapshot = {
-  source: "binance";
-  symbol: MarketSymbol;
-  interval: "1m";
-  candles: Candle[];
-  serverTime: number;
-  fetchedAt: number;
-  ageMs: number;
-};
-export function isMarketSymbol(value: unknown): value is MarketSymbol {
-  return typeof value === "string" && SYMBOLS.includes(value as MarketSymbol);
-}
-export class MarketError extends Error {
-  constructor(
-    message: string,
-    public status = 502,
-    public retryAfter = 15,
-  ) {
-    super(message);
-  }
-}
+export * from "./market-types";
+import {
+  isMarketSymbol,
+  intervalMs,
+  validateMarketCandles,
+  aggregateCandles,
+  MarketError,
+  type MarketSymbol,
+  type MarketSnapshot,
+  type CandleInterval,
+} from "./market-types";
 export function decodeBinanceKlines(
   value: unknown,
   serverTime: number,
+  interval: CandleInterval = "1m",
 ): Candle[] {
   if (
     !Number.isSafeInteger(serverTime) ||
@@ -43,8 +30,8 @@ export function decodeBinanceKlines(
     if (
       !Number.isSafeInteger(time) ||
       time <= 0 ||
-      time % 60000 !== 0 ||
-      closeTime !== time + 59999
+      time % intervalMs(interval) !== 0 ||
+      closeTime !== time + intervalMs(interval) - 1
     )
       throw new MarketError("币安 K 线时间无效");
     if (closeTime >= serverTime) continue; // Never compute signals from an unfinished bar.
@@ -63,11 +50,6 @@ export function decodeBinanceKlines(
       low > high
     )
       throw new MarketError("币安 OHLCV 数值无效");
-    if (
-      candles.length &&
-      time - Date.parse(candles[candles.length - 1].datetime) !== 60000
-    )
-      throw new MarketError("币安 K 线存在缺失或重复，请稍后重试");
     candles.push({
       datetime: new Date(time).toISOString(),
       open,
@@ -77,13 +59,7 @@ export function decodeBinanceKlines(
       volume,
     });
   }
-  if (candles.length < 120)
-    throw new MarketError("币安已收盘 K 线不足，暂停研究信号");
-  const age =
-    serverTime - (Date.parse(candles[candles.length - 1].datetime) + 60000);
-  if (age < 0 || age > MAX_MARKET_AGE_MS)
-    throw new MarketError("币安行情已过期，暂停研究信号");
-  return candles;
+  return validateMarketCandles(candles, serverTime, interval);
 }
 
 // Public market-data-only endpoint documented by Binance. No account or trading key.
@@ -91,6 +67,7 @@ export function decodeBinanceKlines(
 export async function fetchBinanceMarket(
   symbol: MarketSymbol,
   fetcher: typeof fetch = fetch,
+  interval: CandleInterval = "1m",
 ): Promise<Omit<MarketSnapshot, "ageMs">> {
   if (!isMarketSymbol(symbol))
     throw new MarketError("仅支持 BTCUSDT 和 ETHUSDT", 400);
@@ -130,19 +107,29 @@ export async function fetchBinanceMarket(
     }
   };
   const requestedAt = Date.now();
+  const base = interval === "10m" ? "5m" : interval;
+  const limit = interval === "1m" ? 1000 : interval === "10m" ? 404 : 202;
   const [clock, raw] = await Promise.all([
     get("time"),
-    get(`klines?symbol=${symbol}&interval=1m&limit=1000`),
+    get(`klines?symbol=${symbol}&interval=${base}&limit=${limit}`),
   ]);
   const serverTime =
     typeof clock === "object" && clock !== null && "serverTime" in clock
       ? Number(clock.serverTime)
       : NaN;
-  const candles = decodeBinanceKlines(raw, serverTime);
+  const decoded = decodeBinanceKlines(raw, serverTime, base);
+  const candles =
+    interval === "10m"
+      ? validateMarketCandles(
+          aggregateCandles(decoded, "10m", "5m"),
+          serverTime,
+          "10m",
+        )
+      : decoded;
   return {
     source: "binance",
     symbol,
-    interval: "1m",
+    interval,
     candles,
     serverTime,
     fetchedAt: requestedAt,

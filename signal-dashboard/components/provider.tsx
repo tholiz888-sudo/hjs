@@ -14,15 +14,20 @@ import {
   simulate,
   validateParams,
 } from "@/lib/engine";
-import { useBinanceMarket } from "@/lib/use-market";
-import type { MarketSymbol } from "@/lib/binance";
+import { useExchangeMarket } from "@/lib/use-market";
+import type { MarketSymbol, Exchange, CandleInterval } from "@/lib/binance";
 const Context = createContext<{
   params: Params;
   marketMode: "live" | "simulated";
   setMarketMode: (mode: "live" | "simulated") => void;
+  exchange: Exchange;
+  setExchange: (exchange: Exchange) => void;
+  chartInterval: CandleInterval;
+  setChartInterval: (interval: CandleInterval) => void;
+  chartMarket: ReturnType<typeof useExchangeMarket>;
   symbol: MarketSymbol;
   setSymbol: (symbol: MarketSymbol) => void;
-  market: ReturnType<typeof useBinanceMarket>;
+  market: ReturnType<typeof useExchangeMarket>;
   save: (p: Params) => void;
   rows: ReturnType<typeof simulate>;
   regenerate: () => void;
@@ -32,6 +37,20 @@ const Context = createContext<{
   params: defaults,
   marketMode: "live",
   setMarketMode: () => {},
+  exchange: "binance",
+  setExchange: () => {},
+  chartInterval: "1m",
+  setChartInterval: () => {},
+  chartMarket: {
+    snapshot: null,
+    healthy: false,
+    ageMs: Infinity,
+    loading: false,
+    error: null,
+    receivedAt: 0,
+    retrySeconds: 0,
+    refresh: () => {},
+  },
   symbol: "BTCUSDT",
   setSymbol: () => {},
   market: {
@@ -54,7 +73,15 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
   const [params, setParams] = useState(defaults);
   const [marketMode, setMarketMode] = useState<"live" | "simulated">("live");
   const [symbol, setSymbol] = useState<MarketSymbol>("BTCUSDT");
-  const market = useBinanceMarket(symbol, marketMode === "live");
+  const [exchange, setExchange] = useState<Exchange>("binance");
+  const [chartInterval, setChartInterval] = useState<CandleInterval>("1m");
+  const market = useExchangeMarket(symbol, marketMode === "live", exchange);
+  const chartMarket = useExchangeMarket(
+    symbol,
+    marketMode === "live" && chartInterval !== "1m",
+    exchange,
+    chartInterval,
+  );
   const [uploadedData, setUploadedData] = useState<{
     name: string;
     rows: Candle[];
@@ -95,6 +122,11 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
         setMarketMode,
         symbol,
         setSymbol,
+        exchange,
+        setExchange,
+        chartInterval,
+        setChartInterval,
+        chartMarket,
         market,
       }}
     >

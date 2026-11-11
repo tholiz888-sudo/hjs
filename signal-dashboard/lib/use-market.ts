@@ -1,8 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
 import {
-  decodeBinanceKlines,
-  MAX_MARKET_AGE_MS,
+  validateMarketCandles,
+  maxAgeForInterval,
+  type Exchange,
+  type CandleInterval,
   MARKET_POLL_MS,
   type MarketSnapshot,
   type MarketSymbol,
@@ -11,35 +13,35 @@ import {
 export function readMarketSnapshot(
   body: unknown,
   symbol: MarketSymbol,
+  exchange: Exchange = "binance",
+  interval: CandleInterval = "1m",
 ): MarketSnapshot {
   const data = body as MarketSnapshot;
   if (
     !data ||
-    data.source !== "binance" ||
+    data.source !== exchange ||
     data.symbol !== symbol ||
-    data.interval !== "1m" ||
+    data.interval !== interval ||
     !Array.isArray(data.candles) ||
     !Number.isFinite(data.ageMs) ||
     data.ageMs < 0 ||
-    data.ageMs > MAX_MARKET_AGE_MS ||
+    data.ageMs > maxAgeForInterval(interval) ||
     !Number.isFinite(data.fetchedAt)
   )
     throw new Error("行情数据格式或时效无效，实时信号已暂停");
-  const candles = decodeBinanceKlines(
-    data.candles.map((r) => [
-      Date.parse(r.datetime),
-      r.open,
-      r.high,
-      r.low,
-      r.close,
-      r.volume,
-      Date.parse(r.datetime) + 59999,
-    ]),
+  const candles = validateMarketCandles(
+    data.candles,
     data.serverTime,
+    interval,
   );
   return { ...data, candles };
 }
-export function useBinanceMarket(symbol: MarketSymbol, enabled: boolean) {
+export function useExchangeMarket(
+  symbol: MarketSymbol,
+  enabled: boolean,
+  exchange: Exchange = "binance",
+  interval: CandleInterval = "1m",
+) {
   const [revision, setRevision] = useState(0);
   const [now, setNow] = useState(Date.now);
   const [state, setState] = useState<{
@@ -71,7 +73,9 @@ export function useBinanceMarket(symbol: MarketSymbol, enabled: boolean) {
     let timer: ReturnType<typeof setTimeout>;
     const controller = new AbortController();
     setState((previous) =>
-      previous.snapshot?.symbol === symbol
+      previous.snapshot?.symbol === symbol &&
+      previous.snapshot?.source === exchange &&
+      previous.snapshot?.interval === interval
         ? { ...previous, loading: true }
         : {
             snapshot: null,
@@ -86,13 +90,16 @@ export function useBinanceMarket(symbol: MarketSymbol, enabled: boolean) {
       let delay = MARKET_POLL_MS;
       setState((previous) => ({ ...previous, loading: true }));
       try {
-        const response = await fetch(`/api/market?symbol=${symbol}`, {
-          cache: "no-store",
-          signal: AbortSignal.any([
-            controller.signal,
-            AbortSignal.timeout(12_000),
-          ]),
-        });
+        const response = await fetch(
+          `/api/market?symbol=${symbol}&exchange=${exchange}&interval=${interval}`,
+          {
+            cache: "no-store",
+            signal: AbortSignal.any([
+              controller.signal,
+              AbortSignal.timeout(12_000),
+            ]),
+          },
+        );
         const body = await response.json();
         if (!response.ok) {
           const retry = Number(response.headers.get("Retry-After"));
@@ -102,7 +109,7 @@ export function useBinanceMarket(symbol: MarketSymbol, enabled: boolean) {
             typeof body.error === "string" ? body.error : "行情服务暂时不可用",
           );
         }
-        const snapshot = readMarketSnapshot(body, symbol);
+        const snapshot = readMarketSnapshot(body, symbol, exchange, interval);
         if (active) {
           const receivedAt = Date.now();
           setNow(receivedAt);
@@ -139,13 +146,21 @@ export function useBinanceMarket(symbol: MarketSymbol, enabled: boolean) {
       controller.abort();
       clearTimeout(timer);
     };
-  }, [symbol, enabled, revision]);
-  const snapshot = state.snapshot?.symbol === symbol ? state.snapshot : null;
+  }, [symbol, enabled, exchange, interval, revision]);
+  const snapshot =
+    state.snapshot?.symbol === symbol &&
+    state.snapshot?.source === exchange &&
+    state.snapshot?.interval === interval
+      ? state.snapshot
+      : null;
   const ageMs = snapshot
     ? snapshot.ageMs + Math.max(0, Math.max(now, Date.now()) - state.receivedAt)
     : Infinity;
   const healthy =
-    enabled && !!snapshot && !state.error && ageMs <= MAX_MARKET_AGE_MS;
+    enabled &&
+    !!snapshot &&
+    !state.error &&
+    ageMs <= maxAgeForInterval(interval);
   return {
     snapshot,
     healthy,

@@ -11,6 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { intervalMs, type CandleInterval } from "@/lib/market-types";
 import { displayTime } from "@/lib/engine";
 export type CandleChartPoint = {
   time: string;
@@ -65,17 +66,27 @@ export function PriceChart({
   data,
   showEma = true,
   sourceLabel = "模拟数据",
+  interval = "1m",
 }: {
   data: CandleChartPoint[];
   showEma?: boolean;
   sourceLabel?: string;
+  interval?: CandleInterval;
 }) {
+  const tickTime = (time: string) =>
+    intervalMs(interval) >= 86400000
+      ? new Date(time).toLocaleDateString("zh-CN", {
+          timeZone: "UTC",
+          month: "2-digit",
+          day: "2-digit",
+        })
+      : displayTime(time);
   const candles = data.map((row) => ({ ...row, wick: [row.low, row.high] }));
   return (
     <div
       className="chart-box"
       role="img"
-      aria-label={`${sourceLabel} 1 分钟 OHLC 蜡烛 K 线和 EMA 均线图`}
+      aria-label={`${sourceLabel} ${interval} OHLC 蜡烛 K 线和 EMA 均线图`}
     >
       <div className="chart-watermark">
         {sourceLabel === "模拟数据" ? "SIMULATED" : "RESEARCH"}
@@ -93,7 +104,7 @@ export function PriceChart({
           />
           <XAxis
             dataKey="time"
-            tickFormatter={displayTime}
+            tickFormatter={tickTime}
             tick={{ fill: "#768195", fontSize: 10 }}
             minTickGap={50}
             axisLine={false}
@@ -117,7 +128,11 @@ export function PriceChart({
               return (
                 <div className="rounded-lg border border-border bg-card p-3 text-[11px] shadow-lg">
                   <p className="mb-2 text-muted">
-                    {displayTime(String(label))} · {sourceLabel}
+                    {new Date(String(label)).toLocaleString("zh-CN", {
+                      timeZone: "Asia/Shanghai",
+                      hour12: false,
+                    })}{" "}
+                    · {sourceLabel}
                   </p>
                   {[
                     ["开", row.open],
@@ -136,7 +151,7 @@ export function PriceChart({
           />
           <Bar
             dataKey="wick"
-            name={sourceLabel === "模拟数据" ? "模拟 K 线" : "币安 K 线"}
+            name={sourceLabel === "模拟数据" ? "模拟 K 线" : "交易所 K 线"}
             isAnimationActive={false}
             shape={(props: unknown) => (
               <CandleShape {...(props as unknown as CandleShapeProps)} />

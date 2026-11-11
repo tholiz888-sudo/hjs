@@ -26,7 +26,15 @@ import {
   displayTime,
   labels,
   type Candle,
+  ema,
 } from "@/lib/engine";
+import {
+  TIMEFRAMES,
+  intervalLabel,
+  isCandleInterval,
+  exchangeNames,
+} from "@/lib/market-types";
+import { simulatedChartRows } from "@/lib/chart-data";
 import { price, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +42,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MarketControls } from "@/components/market-controls";
 import { PriceChart } from "@/components/charts";
 export default function Dashboard() {
-  const { rows: simulatedRows, marketMode, market } = useResearch();
+  const { rows: simulatedRows, marketMode, market, exchange } = useResearch();
   const rows =
     marketMode === "live" ? (market.snapshot?.candles ?? []) : simulatedRows;
   if (!rows.length)
@@ -42,7 +50,7 @@ export default function Dashboard() {
       <>
         <section className="section-heading">
           <div>
-            <div className="eyebrow">BINANCE / 币安公开行情</div>
+            <div className="eyebrow">MARKET / 交易所公开行情</div>
             <h1 className="page-title">10 分钟方向研究</h1>
             <p className="page-desc">
               选择 BTC 或 ETH，使用真实已收盘 K 线计算研究信号。
@@ -56,7 +64,7 @@ export default function Dashboard() {
               {market.loading ? "正在加载行情" : "实时信号暂停"}
             </h2>
             <p className="mt-4 text-xs text-muted">
-              尚无可验证的币安行情，不显示价格、方向建议或胜率。可等待自动重试，或明确选择模拟数据练习。
+              尚无可验证的交易所行情，不显示价格、方向建议或胜率。可等待自动重试，或明确选择模拟数据练习。
             </p>
           </CardContent>
         </Card>
@@ -65,10 +73,21 @@ export default function Dashboard() {
   return <DashboardContent rows={rows} />;
 }
 function DashboardContent({ rows }: { rows: Candle[] }) {
-  const { params, regenerate, marketMode, symbol, market } = useResearch();
+  const {
+    params,
+    regenerate,
+    marketMode,
+    symbol,
+    market,
+    exchange,
+    chartInterval,
+    setChartInterval,
+    chartMarket,
+  } = useResearch();
+  const exchangeName = exchangeNames[exchange];
   const live = marketMode === "live";
   const paused = live && !market.healthy;
-  const sourceLabel = live ? "币安行情 · 研究用途" : "模拟数据";
+  const sourceLabel = live ? `${exchangeName}行情 · 研究用途` : "模拟数据";
   const [range, setRange] = useState(60);
   const [showEma, setShowEma] = useState(true);
   const [notice, setNotice] = useState("");
@@ -87,15 +106,25 @@ function DashboardContent({ rows }: { rows: Candle[] }) {
     .filter((s) => s.direction !== "neutral")
     .slice(-20)
     .reverse();
-  const chart = rows.slice(-range).map((r, i) => ({
+  const selectedMarket = chartInterval === "1m" ? market : chartMarket;
+  const chartRows = live
+    ? (selectedMarket.snapshot?.candles ?? [])
+    : simulatedChartRows(rows, chartInterval);
+  const chartFast = ema(
+      chartRows.map((r) => r.close),
+      params.fast,
+    ),
+    chartSlow = ema(
+      chartRows.map((r) => r.close),
+      params.slow,
+    );
+  const visibleRows = chartRows.slice(-range);
+  const chart = visibleRows.map((r, i) => ({
+    ...r,
     time: r.datetime,
     price: r.close,
-    open: r.open,
-    high: r.high,
-    low: r.low,
-    close: r.close,
-    fast: signals[Math.max(0, rows.length - range) + i].fast,
-    slow: signals[Math.max(0, rows.length - range) + i].slow,
+    fast: chartFast[chartRows.length - visibleRows.length + i],
+    slow: chartSlow[chartRows.length - visibleRows.length + i],
   }));
   const Icon =
     current.direction === "bullish"
@@ -175,7 +204,7 @@ function DashboardContent({ rows }: { rows: Candle[] }) {
       <div className="mb-5 grid grid-cols-2 gap-3 xl:grid-cols-4">
         {[
           {
-            label: live ? "币安最近收盘价" : "最新模拟价格",
+            label: live ? `${exchangeName}最近收盘价` : "最新模拟价格",
             value: `$${price(last.close)}`,
             sub: `近 60 分钟 ${change >= 0 ? "+" : ""}${change.toFixed(2)}%`,
             color: change >= 0 ? "text-positive" : "text-negative",
@@ -236,9 +265,27 @@ function DashboardContent({ rows }: { rows: Candle[] }) {
             <CardHeader>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <CardTitle>1 分钟 K 线</CardTitle>
+                  <CardTitle>{intervalLabel(chartInterval)} K 线</CardTitle>
                   <Badge>{sourceLabel}</Badge>
                 </div>
+                <label className="flex items-center gap-2 text-xs text-muted">
+                  K 线周期
+                  <select
+                    aria-label="K线周期"
+                    value={chartInterval}
+                    onChange={(e) => {
+                      if (isCandleInterval(e.target.value))
+                        setChartInterval(e.target.value);
+                    }}
+                    className="h-8 rounded-lg border border-border bg-background px-2 text-foreground"
+                  >
+                    {TIMEFRAMES.map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <div className="flex gap-1 rounded-md bg-background p-1">
                   {[30, 60, 180].map((n) => (
                     <button
@@ -249,46 +296,64 @@ function DashboardContent({ rows }: { rows: Candle[] }) {
                         range === n && "bg-[#283125] text-primary",
                       )}
                     >
-                      {n === 180 ? "3 小时" : `${n} 分钟`}
+                      {`${n} 根`}
                     </button>
                   ))}
                 </div>
               </div>
               <div className="mt-4 flex items-baseline gap-3">
                 <span className="text-2xl font-medium tabular-nums">
-                  {price(last.close)}
+                  {chartRows.length ? price(chartRows.at(-1)!.close) : "—"}
                 </span>
                 <span className="text-[10px] text-muted">USDT</span>
-                <span
-                  className={cn(
-                    "text-[10px]",
-                    change >= 0 ? "text-positive" : "text-negative",
-                  )}
-                >
-                  {change >= 0 ? "+" : ""}
-                  {change.toFixed(2)}%
+                <span className="text-[10px] text-muted">
+                  所选周期最近收盘价
                 </span>
               </div>
             </CardHeader>
             <CardContent className="px-3 pb-3">
-              <PriceChart
-                data={chart}
-                showEma={showEma}
-                sourceLabel={sourceLabel}
-              />
+              <p className="mb-3 px-3 text-[10px] leading-5 text-muted">
+                图表周期可独立切换；信号始终使用 1 分钟触发、5 分钟趋势和 10
+                分钟观察窗。10 分钟 K 线由两根完整的 5 分钟 K 线合成；日线按 UTC
+                对齐。
+              </p>
+              {live && selectedMarket.error && (
+                <p role="alert" className="px-3 py-2 text-xs text-negative">
+                  图表数据：{selectedMarket.error}
+                </p>
+              )}
+              {live && !selectedMarket.healthy && chart.length > 0 && (
+                <p className="px-3 text-xs text-[#d0b888]">
+                  当前周期仅显示历史快照，等待更新。
+                </p>
+              )}
+              {chart.length ? (
+                <PriceChart
+                  data={chart}
+                  showEma={showEma}
+                  sourceLabel={sourceLabel}
+                  interval={chartInterval}
+                />
+              ) : (
+                <div className="flex h-64 items-center justify-center text-xs text-muted">
+                  {selectedMarket.loading
+                    ? "正在加载所选周期 K 线…"
+                    : "该周期暂无有效行情"}
+                </div>
+              )}
               <div className="mt-4 flex flex-wrap items-center justify-between gap-2 px-3">
                 <div className="flex gap-4 text-[10px] text-muted">
                   <span>
                     <i className="mr-1 inline-block h-0.5 w-3 bg-primary" />
-                    {live ? "币安 K 线" : "模拟 K 线"}
+                    {live ? `${exchangeName} K 线` : "模拟 K 线"}
                   </span>
                   <span>
                     <i className="mr-1 inline-block h-0.5 w-3 bg-[#76aee7]" />
-                    EMA {params.fast}
+                    图表 EMA {params.fast}
                   </span>
                   <span>
                     <i className="mr-1 inline-block h-0.5 w-3 bg-[#a79bd3]" />
-                    EMA {params.slow}
+                    图表 EMA {params.slow}
                   </span>
                 </div>
                 <label className="flex cursor-pointer items-center gap-2 text-[10px] text-muted">
@@ -360,7 +425,7 @@ function DashboardContent({ rows }: { rows: Candle[] }) {
             </div>
             <p className="px-5 py-3 text-[9px] text-muted">
               {live
-                ? "仅展示币安历史已收盘数据触发的研究信号；连接异常时保留历史快照，不代表当前可交易。"
+                ? `仅展示${exchangeName}历史已收盘数据触发的研究信号；连接异常时保留历史快照，不代表当前可交易。`
                 : "仅展示收盘时触发的历史模拟信号，不代表实际成交或未来收益。"}
             </p>
           </Card>
@@ -471,7 +536,7 @@ function DashboardContent({ rows }: { rows: Candle[] }) {
                 }}
               >
                 <RefreshCw size={13} />
-                {live ? "刷新币安行情" : "重新生成模拟行情"}
+                {live ? "刷新交易所行情" : "重新生成模拟行情"}
               </Button>
               <Link
                 href="/rules"

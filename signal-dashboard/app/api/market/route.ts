@@ -3,15 +3,24 @@ import {
   fetchBinanceMarket,
   isMarketSymbol,
   MarketError,
-  MAX_MARKET_AGE_MS,
+  maxAgeForInterval,
+  intervalMs,
+  isExchange,
+  isCandleInterval,
+  type Exchange,
   type MarketSymbol,
 } from "@/lib/binance";
+import { fetchOkxMarket } from "@/lib/okx";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 type Snapshot = Awaited<ReturnType<typeof fetchBinanceMarket>>;
-// Per-process, bounded to two symbols; coalesce concurrent requests and honor cooldowns.
+// Bounded to 2 exchanges × 2 symbols × 10 intervals; no arbitrary upstream URLs.
+const exchangeCooldown = new Map<
+  Exchange,
+  { until: number; error: MarketError }
+>();
 const cache = new Map<
-  MarketSymbol,
+  string,
   {
     data?: Snapshot;
     pending?: Promise<Snapshot>;
@@ -26,9 +35,24 @@ export async function GET(request: NextRequest) {
       { error: "仅支持 BTCUSDT 和 ETHUSDT" },
       { status: 400 },
     );
-  const entry = cache.get(symbol) ?? {};
-  cache.set(symbol, entry);
+  const exchange = request.nextUrl.searchParams.get("exchange") ?? "binance";
+  const interval = request.nextUrl.searchParams.get("interval") ?? "1m";
+  if (!isExchange(exchange) || !isCandleInterval(interval))
+    return NextResponse.json(
+      { error: "不支持的交易所或 K 线周期" },
+      { status: 400 },
+    );
+  const key = `${exchange}:${symbol}:${interval}`;
+  const entry = cache.get(key) ?? {};
+  cache.set(key, entry);
   try {
+    const cooldown = exchangeCooldown.get(exchange);
+    if (cooldown && cooldown.until > Date.now())
+      throw new MarketError(
+        cooldown.error.message,
+        429,
+        Math.ceil((cooldown.until - Date.now()) / 1000),
+      );
     if (entry.blockedUntil && entry.blockedUntil > Date.now())
       throw new MarketError(
         entry.error?.message ?? "请稍后重试",
@@ -37,7 +61,10 @@ export async function GET(request: NextRequest) {
       );
     let data = entry.data;
     if (!data || Date.now() - data.fetchedAt >= 10_000) {
-      entry.pending ??= fetchBinanceMarket(symbol);
+      entry.pending ??=
+        exchange === "okx"
+          ? fetchOkxMarket(symbol, fetch, interval)
+          : fetchBinanceMarket(symbol, fetch, interval);
       try {
         data = await entry.pending;
         entry.data = data;
@@ -46,10 +73,11 @@ export async function GET(request: NextRequest) {
       }
     }
     const lastClosedAt =
-      Date.parse(data.candles[data.candles.length - 1].datetime) + 60000;
+      Date.parse(data.candles[data.candles.length - 1].datetime) +
+      intervalMs(interval);
     const ageMs =
       data.serverTime - lastClosedAt + Math.max(0, Date.now() - data.fetchedAt);
-    if (ageMs > MAX_MARKET_AGE_MS)
+    if (ageMs > maxAgeForInterval(interval))
       throw new MarketError("行情已过期，暂停研究信号");
     return NextResponse.json(
       { ...data, ageMs },
@@ -60,6 +88,11 @@ export async function GET(request: NextRequest) {
       error instanceof MarketError
         ? error
         : new MarketError("行情暂时不可用，实时信号已暂停");
+    if (failure.status === 429)
+      exchangeCooldown.set(exchange, {
+        until: Date.now() + failure.retryAfter * 1000,
+        error: failure,
+      });
     entry.data = undefined;
     entry.error = failure;
     entry.blockedUntil = Date.now() + failure.retryAfter * 1000;

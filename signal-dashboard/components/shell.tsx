@@ -11,6 +11,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { exchangeNames } from "@/lib/market-types";
+import { SignalAlerts } from "./signal-alerts";
 import { useResearch } from "./provider";
 const disclaimer =
   "仅供研究学习，不构成任何投资建议。历史表现不代表未来结果，交易有风险，请谨慎决策。";
@@ -21,13 +23,13 @@ const links = [
 ];
 export function Shell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
-  const { marketMode, market } = useResearch();
+  const { marketMode, market, exchange } = useResearch();
   const statusLabel =
     marketMode === "simulated"
       ? "模拟演示环境"
       : market.healthy
-        ? "币安行情已连接"
-        : "币安行情连接中或暂停";
+        ? `${exchangeNames[exchange]}行情已连接`
+        : `${exchangeNames[exchange]}行情连接中或暂停`;
   return (
     <>
       <div className="risk-banner">
@@ -112,7 +114,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </Link>
           ))}
         </nav>
-        <main>{children}</main>
+        <main>
+          <SignalAlerts />
+          {children}
+        </main>
         <footer>
           <p className="w-full rounded-lg border border-[#453921] bg-[#272219] p-3 text-[11px] leading-6 text-[#d0b888]">
             {disclaimer}

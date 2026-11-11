@@ -18,6 +18,6 @@ export const simulatedSource: MarketDataSource = {
     return simulate(seed, limit);
   },
 };
-// Binance now has a dedicated server adapter in binance.ts and /api/market.
+// Binance and OKX have server adapters in binance.ts, okx.ts and /api/market.
 // This interface remains available for other sources; production UI must always
 // distinguish actual exchange data, retained historical snapshots, and simulations.
