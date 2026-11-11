@@ -1,0 +1,18 @@
+import { build } from 'esbuild';
+import postcss from 'postcss';
+import tailwind from 'tailwindcss';
+import autoprefixer from 'autoprefixer';
+import { mkdir,readFile,writeFile,rm } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+import {createHash} from 'node:crypto';
+const root=fileURLToPath(new URL('../',import.meta.url)),out=path.join(root,'portal-dist');
+const alias={name:'portal-next-adapters',setup(build){build.onResolve({filter:/^next\/(link|navigation|server)$/},args=>({path:path.join(root,args.path==='next/server'?'portal/next-server.ts':'portal/router.tsx')}))}};
+const client=await build({absWorkingDir:root,entryPoints:['portal/entry.tsx'],bundle:true,write:false,minify:true,format:'esm',platform:'browser',target:'es2020',jsx:'automatic',define:{'process.env.NODE_ENV':'"production"'},legalComments:'eof',plugins:[alias],metafile:true});
+const server=await build({absWorkingDir:root,entryPoints:['app/api/market/route.ts'],bundle:true,write:false,minify:true,format:'cjs',platform:'node',target:'node24',plugins:[alias],metafile:true});
+const css=(await postcss([tailwind({config:path.join(root,'tailwind.config.ts')}),autoprefixer]).process(await readFile(path.join(root,'app/globals.css'),'utf8'),{from:path.join(root,'app/globals.css')})).css;
+const hash=value=>createHash('sha256').update(value).digest('hex'),js=client.outputFiles[0].contents,jsName='assets/app-'+hash(js).slice(0,16)+'.js',cssName='assets/style-'+hash(css).slice(0,16)+'.css';
+await rm(out,{recursive:true,force:true});await mkdir(path.join(out,'assets'),{recursive:true});await writeFile(path.join(out,jsName),js);await writeFile(path.join(out,cssName),css);await writeFile(path.join(out,'market.cjs'),server.outputFiles[0].contents);
+await writeFile(path.join(out,'index.html'),`<!doctype html><html lang="zh-CN" class="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>十分钟 SIGNAL · 事件合约研究</title><link rel="stylesheet" href="__SIGNAL_BASE__/${cssName}"></head><body><div id="signal-root" data-base="__SIGNAL_BASE__" data-api="__SIGNAL_API__"></div><noscript>请启用 JavaScript 使用研究仪表盘。</noscript><script type="module" src="__SIGNAL_BASE__/${jsName}"></script></body></html>`);
+const sources={};for(const name of [...new Set([...Object.keys(client.metafile.inputs),...Object.keys(server.metafile.inputs)].filter(name=>!name.startsWith('node_modules/')).concat(['app/globals.css','portal/build.mjs','tailwind.config.ts','package-lock.json']))].sort())sources[name]=hash(await readFile(path.join(root,name)));
+await writeFile(path.join(out,'manifest.json'),JSON.stringify({version:1,files:[jsName,cssName],sources},null,2)+'\n');console.log('Bundled local dashboard, rules, backtest and original market API:',js.byteLength,'client bytes');

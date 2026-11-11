@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "files": [
+    "assets/app-19ad7e07ac1f236e.js",
+    "assets/style-8882df36abf5a670.css"
+  ],
+  "sources": {
+    "app/api/market/route.ts": "241e697272f292eefe30e7393c2ef6b8dd797e6484c5ce61cf94ac43085b7bfc",
+    "app/backtest/page.tsx": "109e53034612ffd7637692c1cc36cf11d8dac23a8d1140917d6b9db4fb351cf9",
+    "app/globals.css": "970b5fe2020b88275a45ba6a3d3336e86f68eefd3e60a03e96297f852f44bf54",
+    "app/page.tsx": "d0166a74bc719f60d2fca5bce158b9b35db29d7e1b66238bbc1efdb49a083546",
+    "app/rules/page.tsx": "b95e8b39da0752907d1a6b8f640143548ca31f706ad52c1ce6401e79afd0fc7b",
+    "components/charts.tsx": "73a1dba04f06aaeee50ad1d27077496e0d1bce4c69a5f08647ba4881e15e5f83",
+    "components/market-controls.tsx": "cc1dc2f9615fb41bf8131eba046efc596fd879c8151da3dae6d7b85bb101e58f",
+    "components/provider.tsx": "58ff6000d3014fc71de77da0a8ecb368bb39151ddd4208e8c519a12cc7794e33",
+    "components/shell.tsx": "a4d7119e08cbf9ddb0f28d6d86d826f1893c0ac36905c112c072a82178795491",
+    "components/signal-alerts.tsx": "4c3395c15f59026e9c9ca3bb5eb7b389e15e97392dd72b8a30bb9c4a695f7653",
+    "components/ui/badge.tsx": "98e25395299fb8e82b5500244531ca56606903b6544c7d2a216236b89e70c8c1",
+    "components/ui/button.tsx": "44f1bff011807502795c2900c0da2090406da2f22f8869b8b12c16ab73561364",
+    "components/ui/card.tsx": "732317a99e64a99fbbc71e98e71010f9055989a11161233327b6c0d28da62292",
+    "components/ui/input.tsx": "58cca7b1e61ef5fee324bdd4938681d554caa584ff2ca8a1baae9b012232cc9a",
+    "components/ui/switch.tsx": "c2e03a089b8bf3549b1a9e341d076b9f4f16903008bcaa7ea80fe700f9849002",
+    "lib/alerts.ts": "cf98f14da32a9b8634d0a3a33fa2d2d3aecf5842aeea9e399b999e40a79d5296",
+    "lib/binance.ts": "0fe4d5592a35cd2899653e08eac058a23abff30959cedc9b3f0f39ccb8e5618b",
+    "lib/chart-data.ts": "533b35c09c35b51340188ab060ef0ab26295bb8c68edaf386c5fd92c9cdcfbd7",
+    "lib/engine.ts": "38960d69fd3005bbd74e13f7d77494874d31ed14bb443d7eac5cd6e4f4860b9f",
+    "lib/market-types.ts": "c8b4797cf6ce07a28c2230acbfa6a7f1179a12f435fdee7f50aaa303fbf6efd5",
+    "lib/okx.ts": "f1e2dd760929f9e8f659f2e82dba0cec097dc453572544c5cf39950d43b6f424",
+    "lib/use-market.ts": "3eb538af6b7bb90b4bb0fa0ea5715a2db3911d9537c03ed69cc604400ad99197",
+    "lib/utils.ts": "a63d17138572e9f189fdd58a974ec7f75e4613f6e3ca72a52360f6d537feafc7",
+    "package-lock.json": "0d621add6491ffec5181869afda8e2ebba9b450a922abcfdfc80a42ae2beebb3",
+    "portal/build.mjs": "2b479bf34e72bf593fd063f6f125e5bd2639c8ce7c6be4b8a8c29294d57cf004",
+    "portal/entry.tsx": "515d976acc34f5a50b605cf28d4788f4f07f3111f7110fde705a59b2de67e338",
+    "portal/next-server.ts": "77bbf4d55a090e70c939de237832f1a494d0d6284d437669ae7281e06de86f8c",
+    "portal/router.tsx": "92d7b850581807dd558ea63825bf1d124142b491a7ded9307bf007433a2a6e96",
+    "tailwind.config.ts": "0bba7c3ee4bc868af672f4b47cb4e37cebc9c82e3c290db6b776d5d3fbe22655"
+  }
+}

@@ -1,0 +1,131 @@
+"use client";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  Activity,
+  ArrowUpRight,
+  ChartNoAxesCombined,
+  FlaskConical,
+  LayoutDashboard,
+  Settings2,
+  ShieldCheck,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { exchangeNames } from "@/lib/market-types";
+import { SignalAlerts } from "./signal-alerts";
+import { useResearch } from "./provider";
+const disclaimer =
+  "仅供研究学习，不构成任何投资建议。历史表现不代表未来结果，交易有风险，请谨慎决策。";
+const links = [
+  { href: "/", title: "信号仪表盘", icon: LayoutDashboard },
+  { href: "/rules", title: "规则与参数", icon: Settings2 },
+  { href: "/backtest", title: "策略回测", icon: ChartNoAxesCombined },
+];
+export function Shell({ children }: { children: React.ReactNode }) {
+  const path = usePathname();
+  const { marketMode, market, exchange } = useResearch();
+  const statusLabel =
+    marketMode === "simulated"
+      ? "模拟演示环境"
+      : market.healthy
+        ? `${exchangeNames[exchange]}行情已连接`
+        : `${exchangeNames[exchange]}行情连接中或暂停`;
+  return (
+    <>
+      <div className="risk-banner">
+        <ShieldCheck size={13} className="shrink-0" />
+        <span>{disclaimer}</span>
+        <span className="ml-auto hidden whitespace-nowrap text-[#c5ad79] md:block">
+          RESEARCH ONLY
+        </span>
+      </div>
+      <aside className="sidebar">
+        <Link href="/" className="brand">
+          <div className="brand-icon">
+            <Activity size={23} />
+          </div>
+          <span>
+            十分钟<span className="ml-2 text-primary">SIGNAL</span>
+            <small>短周期信号研究工作台</small>
+          </span>
+        </Link>
+        <div className="mt-12 px-4 text-[10px] tracking-[.18em] text-muted">
+          WORKSPACE / 研究空间
+        </div>
+        <nav className="mt-4 space-y-2">
+          {links.map(({ href, title, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className={cn("nav-link", path === href && "active")}
+            >
+              <Icon size={17} />
+              {title}
+              {path === href && (
+                <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />
+              )}
+            </Link>
+          ))}
+        </nav>
+        <div className="sidebar-note">
+          <FlaskConical size={19} className="mb-3 text-primary" />
+          <p className="text-sm text-foreground">从数据到判断</p>
+          <p className="mt-2 text-xs leading-6 text-muted">
+            用规则过滤噪声，
+            <br />
+            用回测检验假设。
+          </p>
+          <div className="mt-5 flex items-center gap-2 text-[10px] text-muted">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+            {statusLabel} <ArrowUpRight size={12} />
+          </div>
+        </div>
+        <div className="sidebar-bottom">
+          SIGNAL LAB <span>v1.0</span>
+        </div>
+      </aside>
+      <div className="workspace">
+        <header className="topbar">
+          <div className="flex items-center gap-2 text-xs text-muted">
+            <span className="hidden sm:inline">研究空间</span>
+            <span className="hidden sm:inline text-border">/</span>
+            <span className="text-foreground">
+              {links.find((l) => l.href === path)?.title ?? "信号研究"}
+            </span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-2 text-[11px] text-muted">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+              {statusLabel}
+            </span>
+            <span className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-white/5 text-[10px]">
+              SL
+            </span>
+          </div>
+        </header>
+        <nav className="mobile-nav">
+          {links.map((l) => (
+            <Link
+              className={cn(path === l.href && "text-primary")}
+              key={l.href}
+              href={l.href}
+            >
+              {l.title}
+            </Link>
+          ))}
+        </nav>
+        <main>
+          <SignalAlerts />
+          {children}
+        </main>
+        <footer>
+          <p className="w-full rounded-lg border border-[#453921] bg-[#272219] p-3 text-[11px] leading-6 text-[#d0b888]">
+            {disclaimer}
+          </p>
+          <span>© 2026 SIGNAL LAB · 研究与教育用途</span>
+          <span>首页行情来源可切换；回测均为研究用途 · UTC+8</span>
+        </footer>
+      </div>
+    </>
+  );
+}
