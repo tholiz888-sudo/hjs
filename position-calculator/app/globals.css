@@ -22,3 +22,4 @@
 
 .simple-symbol label{min-width:0;flex:1}.simple-symbol select{min-width:0}
 .custom-symbol-editor{flex-wrap:wrap}.custom-symbol-editor>.field{flex-basis:200px}.custom-symbol-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}.custom-symbol-actions .button:last-child:not(:first-child){color:var(--red)}@media(max-width:600px){.custom-symbol-actions{margin-bottom:0}}
+.simple-mode{margin-bottom:22px}.simple-mode button{min-height:44px;font-size:12px}.simple-mode button[aria-pressed=true]{color:var(--yellow);background:#f0b90b15;box-shadow:inset 0 0 0 1px #f0b90b40}
