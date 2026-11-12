@@ -75,12 +75,17 @@ test("both exchanges support every chart interval without changing 1m strategy o
 test("new closed-bar signal triggers one page/sound/system alert, never initial or repeated history", async ({
   page,
 }) => {
+  await page.clock.install();
   await page.addInitScript(() => {
     const scope = window as unknown as {
       permissionRequests: number;
       systemNotices: string[];
+      toneStarts:number;
     };
     scope.permissionRequests = 0;
+    scope.toneStarts=0;
+    const create=AudioContext.prototype.createOscillator;
+    AudioContext.prototype.createOscillator=function(){const tone=create.call(this);const start=tone.start.bind(tone);tone.start=(when)=>{scope.toneStarts++;start(when)};return tone};
     scope.systemNotices = [];
     class FakeNotification {
       static permission: NotificationPermission = "default";
@@ -150,6 +155,11 @@ test("new closed-bar signal triggers one page/sound/system alert, never initial 
         (window as unknown as { systemNotices: string[] }).systemNotices.length,
     ),
   ).toBe(1);
+  const beforeRepeat=await page.evaluate(()=>(window as unknown as {toneStarts:number}).toneStarts);
+  await page.clock.fastForward(7000);
+  expect(await page.evaluate(()=>(window as unknown as {toneStarts:number}).toneStarts)).toBe(beforeRepeat+6);
+  await expect(page.getByTestId("alert-count")).toContainText("1 条新信号");
+  await page.getByRole("button", { name: "我已看到", exact: true }).click();
   await page.getByRole("button", { name: "刷新行情", exact: true }).click();
   await expect.poll(() => calls).toBe(3);
   await expect(page.getByTestId("alert-count")).toContainText("1 条新信号");

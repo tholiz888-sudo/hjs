@@ -6,7 +6,7 @@ import { analyze, displayTime, labels } from "@/lib/engine";
 import { advanceSignalAlert, type AlertCursor } from "@/lib/alerts";
 import { exchangeNames } from "@/lib/market-types";
 import { Button } from "./ui/button";
-type Notice = { id: string; title: string; detail: string; test: boolean };
+type Notice = { id: string; title: string; detail: string; test: boolean; raisedAt?:number };
 export function SignalAlerts() {
   const { market, marketMode, exchange, symbol, params } = useResearch();
   const [enabled, setEnabled] = useState(true),
@@ -16,6 +16,9 @@ export function SignalAlerts() {
     NotificationPermission | "unsupported"
   >("default");
   const [message, setMessage] = useState("");
+  const [volume,setVolume]=useState(65),[repeat,setRepeat]=useState(true),[mutedNotice,setMutedNotice]=useState("");
+  const dialog=useRef<HTMLDialogElement|null>(null);
+  const tones=useRef(new Set<OscillatorNode>());
   const [notice, setNotice] = useState<Notice | null>(null);
   const [history, setHistory] = useState<Notice[]>([]);
   const [total, setTotal] = useState(0);
@@ -33,40 +36,52 @@ export function SignalAlerts() {
       void audio.current?.close().catch(() => {});
     };
   }, []);
-  useEffect(() => {
-    if (!notice) return;
-    const timer = setTimeout(() => setNotice(null), 12000);
-    return () => clearTimeout(timer);
-  }, [notice]);
+  function stopAlarm(){for(const oscillator of tones.current){try{oscillator.stop()}catch{}}tones.current.clear();}
+  function acknowledge(){stopAlarm();setNotice(null);}
+  useEffect(()=>{
+    if(!notice)return;
+    if(dialog.current&&!dialog.current.open)dialog.current.showModal();
+  },[notice]);
+  useEffect(()=>{
+    if(!notice||!sound||mutedNotice===notice.id)return;
+    const started=notice.raisedAt??Date.now();
+    if(!notice.test&&Date.now()-started>=60_000)return;
+    beep();
+    if(!repeat||notice.test)return()=>stopAlarm();
+    const timer=setInterval(()=>{if(Date.now()-started>=60_000){clearInterval(timer);return;}beep();},7000);
+    return()=>{clearInterval(timer);stopAlarm()};
+  },[notice,sound,repeat,volume,mutedNotice]);
   function beep() {
+    stopAlarm();
     const context = audio.current;
-    if (!context || context.state !== "running") return;
-    for (let i = 0; i < 2; i++) {
+    if (!context || context.state !== "running" || volume===0) return;
+    for (let i = 0; i < 6; i++) {
       const oscillator = context.createOscillator(),
         gain = context.createGain(),
-        start = context.currentTime + i * 0.22;
-      oscillator.type = "sine";
-      oscillator.frequency.value = i ? 740 : 540;
-      gain.gain.setValueAtTime(0.04, start);
-      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.18);
-      oscillator.connect(gain);
-      gain.connect(context.destination);
-      oscillator.start(start);
-      oscillator.stop(start + 0.2);
+        start = context.currentTime + i * 0.27;
+      oscillator.type = "triangle";
+      oscillator.frequency.value = [660,880,660][i%3];
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.28*volume/100,start+0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.22);
+      oscillator.connect(gain);gain.connect(context.destination);
+      tones.current.add(oscillator);oscillator.onended=()=>{tones.current.delete(oscillator);oscillator.disconnect();gain.disconnect()};
+      oscillator.start(start);oscillator.stop(start + 0.24);
     }
   }
   function deliver(item: Notice) {
-    setNotice(item);
+    setNotice({...item,raisedAt:Date.now()});
     setHistory((items) => [item, ...items].slice(0, 10));
     if (!item.test) setTotal((value) => value + 1);
-    if (sound) beep();
+
     if (
       system &&
       "Notification" in window &&
       Notification.permission === "granted"
     ) {
       try {
-        new Notification(item.title, { body: item.detail, tag: item.id });
+        const notification=new Notification(item.title, { body: item.detail, tag: item.id, requireInteraction:true });
+        notification.onclick=()=>{window.focus();notification.close()};
       } catch {
         setMessage("当前浏览器不支持此类系统通知，仍会显示页面提醒。");
       }
@@ -98,7 +113,7 @@ export function SignalAlerts() {
   }, [enabled, marketMode, market.healthy, signals, exchange, symbol, params]);
   async function toggleSound() {
     if (sound) {
-      setSound(false);
+      stopAlarm();setSound(false);
       return;
     }
     try {
@@ -148,7 +163,7 @@ export function SignalAlerts() {
           variant={enabled ? "default" : "outline"}
           size="sm"
           aria-pressed={enabled}
-          onClick={() => setEnabled((v) => !v)}
+          onClick={() => {if(enabled)acknowledge();setEnabled((v) => !v)}}
         >
           {enabled ? "页面提醒已开" : "页面提醒已关"}
         </Button>
@@ -190,6 +205,11 @@ export function SignalAlerts() {
           本页会话 {total} 条新信号
         </span>
       </div>
+      <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-muted">
+        <label className="flex items-center gap-2">提醒音量 <input aria-label="提醒音量" type="range" min="0" max="100" step="5" value={volume} onChange={event=>setVolume(Number(event.target.value))}/><span>{volume}%</span></label>
+        <label className="flex items-center gap-2"><input type="checkbox" checked={repeat} onChange={event=>setRepeat(event.target.checked)}/>真实信号重复响铃（最多 60 秒）</label>
+        <span>弹窗保留至确认；测试提醒只响一轮。</span>
+      </div>
       <p className="mt-3 text-[10px] leading-5 text-muted">
         只提醒连接正常后最新已收盘的 1
         分钟信号；图表周期不影响提醒。首次加载、切换行情源、修改规则及模拟模式不触发历史提醒。请保持网页运行，浏览器关闭后不提供后台推送。
@@ -209,21 +229,13 @@ export function SignalAlerts() {
         </details>
       )}
       {notice && (
-        <aside
-          role="status"
-          data-testid="signal-notice"
-          className="fixed bottom-5 right-4 z-50 w-[min(380px,calc(100vw-32px))] rounded-xl border border-primary/40 bg-card p-5 shadow-2xl"
-        >
-          <div className="flex items-start justify-between gap-3">
-            <h2 className="text-sm font-semibold text-primary">
-              {notice.title}
-            </h2>
-            <button aria-label="关闭信号提醒" onClick={() => setNotice(null)}>
-              <X size={15} />
-            </button>
-          </div>
-          <p className="mt-3 text-xs leading-6 text-muted">{notice.detail}</p>
-        </aside>
+        <dialog ref={dialog} role="alertdialog" aria-modal="true" aria-labelledby="signal-alert-title" aria-describedby="signal-alert-detail" data-testid="signal-notice" className="signal-alert-dialog" onCancel={event=>{event.preventDefault();acknowledge()}}>
+          <div className="signal-alert-heading"><span className="signal-alert-icon"><Bell size={28}/></span><span>{notice.test?'提醒效果测试':'新信号 · 请查看'}</span><button aria-label="关闭信号提醒" onClick={acknowledge}><X size={22}/></button></div>
+          <h2 id="signal-alert-title">{notice.title}</h2>
+          <p id="signal-alert-detail">{notice.detail}</p>
+          <p className="signal-alert-hint">{notice.test?'测试不会计入新信号数量。':sound&&repeat?'每 7 秒重复一轮，最多 60 秒；确认或停止响铃后结束。':'请核对信号时间和行情，确认后关闭。'}</p>
+          <div className="signal-alert-actions"><Button variant="outline" disabled={!sound||mutedNotice===notice.id} onClick={()=>{stopAlarm();setMutedNotice(notice.id)}}>停止响铃</Button><Button autoFocus onClick={acknowledge}>我已看到</Button></div>
+        </dialog>
       )}
     </section>
   );
