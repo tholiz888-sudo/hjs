@@ -870,6 +870,9 @@ video {
   --tw-bg-opacity: 1;
   background-color: rgb(17 22 30 / var(--tw-bg-opacity, 1));
 }
+.bg-negative\/10 {
+  background-color: rgb(242 150 153 / 0.1);
+}
 .bg-negative\/5 {
   background-color: rgb(242 150 153 / 0.05);
 }

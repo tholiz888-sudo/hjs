@@ -1,14 +1,14 @@
 {
   "version": 1,
   "files": [
-    "assets/app-0327d4b21ca78a0a.js",
-    "assets/style-9de4fc53ad33c136.css"
+    "assets/app-0869b7ab6a57a0f3.js",
+    "assets/style-9e3028054d16be05.css"
   ],
   "sources": {
     "app/api/market/route.ts": "241e697272f292eefe30e7393c2ef6b8dd797e6484c5ce61cf94ac43085b7bfc",
     "app/backtest/page.tsx": "109e53034612ffd7637692c1cc36cf11d8dac23a8d1140917d6b9db4fb351cf9",
     "app/globals.css": "3bc2cca2e81d2e3055382b06d24adeb35b03dfc71298b57ced1233a8dd6ef22f",
-    "app/page.tsx": "d0166a74bc719f60d2fca5bce158b9b35db29d7e1b66238bbc1efdb49a083546",
+    "app/page.tsx": "3941b6efccc4c8b9f7c468b88174f9b3ffb03548896c209f4ff3a9c5cbf87209",
     "app/rules/page.tsx": "b95e8b39da0752907d1a6b8f640143548ca31f706ad52c1ce6401e79afd0fc7b",
     "components/charts.tsx": "73a1dba04f06aaeee50ad1d27077496e0d1bce4c69a5f08647ba4881e15e5f83",
     "components/market-controls.tsx": "cc1dc2f9615fb41bf8131eba046efc596fd879c8151da3dae6d7b85bb101e58f",
@@ -26,6 +26,7 @@
     "lib/engine.ts": "38960d69fd3005bbd74e13f7d77494874d31ed14bb443d7eac5cd6e4f4860b9f",
     "lib/market-types.ts": "c8b4797cf6ce07a28c2230acbfa6a7f1179a12f435fdee7f50aaa303fbf6efd5",
     "lib/okx.ts": "f1e2dd760929f9e8f659f2e82dba0cec097dc453572544c5cf39950d43b6f424",
+    "lib/signal-outcome.ts": "8b380c956d3a1e1fec16a514aa13345b8cbc2dded7e31354d6259e51c40f638e",
     "lib/use-market.ts": "3eb538af6b7bb90b4bb0fa0ea5715a2db3911d9537c03ed69cc604400ad99197",
     "lib/utils.ts": "a63d17138572e9f189fdd58a974ec7f75e4613f6e3ca72a52360f6d537feafc7",
     "package-lock.json": "0d621add6491ffec5181869afda8e2ebba9b450a922abcfdfc80a42ae2beebb3",

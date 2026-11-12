@@ -1,4 +1,5 @@
 "use client";
+import {signalOutcome,outcomeLabels} from "@/lib/signal-outcome";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -105,7 +106,8 @@ function DashboardContent({ rows }: { rows: Candle[] }) {
     .map((s, i) => ({ ...s, index: i }))
     .filter((s) => s.direction !== "neutral")
     .slice(-20)
-    .reverse();
+    .reverse()
+    .map(s=>({...s,outcome:signalOutcome(rows,s.index,s.direction)}));
   const selectedMarket = chartInterval === "1m" ? market : chartMarket;
   const chartRows = live
     ? (selectedMarket.snapshot?.candles ?? [])
@@ -393,6 +395,7 @@ function DashboardContent({ rows }: { rows: Candle[] }) {
                     <th>RSI ({params.rsi})</th>
                     <th>成交量倍数</th>
                     <th>观察窗</th>
+                    <th>十分钟后价格</th><th>价格变化</th><th>结果</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -410,12 +413,15 @@ function DashboardContent({ rows }: { rows: Candle[] }) {
                       <td className="text-muted">
                         {s.volumeRatio.toFixed(2)}×
                       </td>
-                      <td className="text-muted">10 分钟</td>
+                      <td className="text-muted" title={`观察截止：${displayDate(s.outcome.dueAt)} ${displayTime(s.outcome.dueAt)} UTC+8`}>10 分钟</td>
+                      <td>{s.outcome.price===null?'—':price(s.outcome.price)}</td>
+                      <td className="text-muted">{s.outcome.changePercent===null?'—':`${s.outcome.changePercent>0?'+':''}${s.outcome.changePercent.toFixed(3)}%`}</td>
+                      <td><span data-testid="signal-outcome" className={cn('rounded px-2 py-1 text-[10px] font-semibold',s.outcome.status==='success'?'bg-positive/10 text-positive':s.outcome.status==='failure'?'bg-negative/10 text-negative':'bg-white/5 text-muted')}>{outcomeLabels[s.outcome.status]}</span></td>
                     </tr>
                   ))}
                   {!recent.length && (
                     <tr>
-                      <td colSpan={6} className="text-center text-muted">
+                      <td colSpan={9} className="text-center text-muted">
                         当前参数下暂无触发信号，可以前往规则页调整参数。
                       </td>
                     </tr>
@@ -426,7 +432,7 @@ function DashboardContent({ rows }: { rows: Candle[] }) {
             <p className="px-5 py-3 text-[9px] text-muted">
               {live
                 ? `仅展示${exchangeName}历史已收盘数据触发的研究信号；连接异常时保留历史快照，不代表当前可交易。`
-                : "仅展示收盘时触发的历史模拟信号，不代表实际成交或未来收益。"}
+                : "仅展示收盘时触发的历史模拟信号，不代表实际成交或未来收益。"} 成功／失败按信号参考价与整十分钟后的 1 分钟 K 线收盘价比较：看涨后更高、看跌后更低为成功；同价持平，未到期观察中，缺少对应行情不判定。不代表真实成交或事件合约结算收益，口径与回测的下一根开盘入场不同。
             </p>
           </Card>
         </div>
