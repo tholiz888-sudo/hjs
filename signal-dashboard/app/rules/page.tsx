@@ -1,4 +1,5 @@
 "use client";
+import {AdvancedFilters} from "@/components/advanced-filters";
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
@@ -22,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 const fields: {
-  key: Exclude<keyof Params, "trendEnabled">;
+  key: Exclude<keyof Params, "trendEnabled"|"adxEnabled"|"atrEnabled"|"deviationEnabled">;
   name: string;
   min: number;
   max: number;
@@ -185,6 +186,7 @@ export default function Rules() {
                 </div>
               ))}
             </div>
+            <AdvancedFilters params={draft} onChange={update}/>
             <div className="mt-8 border-t border-border pt-5">
               {error && (
                 <p role="alert" className="mb-4 text-xs text-negative">

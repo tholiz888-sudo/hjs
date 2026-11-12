@@ -223,7 +223,7 @@ function DashboardContent({ rows }: { rows: Candle[] }) {
               signals.filter((s) => s.direction !== "neutral").length,
             ).padStart(2, "0"),
             sub: params.trendEnabled
-              ? "四项过滤条件共同确认"
+              ? "已启用过滤条件共同确认"
               : "趋势过滤关闭 · 三项条件确认",
             color: "text-muted",
           },
@@ -486,8 +486,8 @@ function DashboardContent({ rows }: { rows: Candle[] }) {
                   : current.direction === "neutral"
                     ? "过滤条件尚未全部满足，等待趋势与交叉形成共振。保持观望也是研究的一部分。"
                     : params.trendEnabled
-                      ? "趋势方向与均线交叉一致，RSI 和成交量过滤均已通过。下一根开盘起观察 10 分钟。"
-                      : "趋势过滤已关闭；均线交叉、RSI 和成交量过滤通过。下一根开盘起观察 10 分钟。"}
+                      ? "趋势方向与均线交叉一致，RSI、成交量及已启用的增强过滤均已通过。下一根开盘起观察 10 分钟。"
+                      : "趋势过滤已关闭；均线交叉、RSI、成交量及已启用的增强过滤通过。下一根开盘起观察 10 分钟。"}
               </p>
               <div className="my-5 border-t border-border" />
               <div className="mb-4 flex justify-between text-[10px]">

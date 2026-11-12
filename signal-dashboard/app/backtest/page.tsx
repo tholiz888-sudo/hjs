@@ -1,4 +1,5 @@
 "use client";
+import {FilterComparison} from "@/components/filter-comparison";
 import { useMemo, useRef, useState } from "react";
 import {
   Check,
@@ -146,6 +147,7 @@ export default function Backtest() {
           </div>
         </CardContent>
       </Card>
+      <FilterComparison rows={rows} params={params}/>
       <div className="mb-5 grid grid-cols-2 gap-3 xl:grid-cols-3">
         {[
           {
@@ -235,7 +237,7 @@ export default function Backtest() {
           </div>
         </CardHeader>
         <div className="table-scroll">
-          <table>
+          <table data-testid="backtest-trades">
             <thead>
               <tr>
                 <th>入场日期 / UTC+8</th>

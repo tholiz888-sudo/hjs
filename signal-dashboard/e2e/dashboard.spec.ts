@@ -54,7 +54,7 @@ test("uploaded CSV survives navigation to change strategy parameters", async ({
     .getByRole("link", { name: "规则与参数" })
     .click();
   await page.locator("#fast").fill("4");
-  await page.getByRole("switch").uncheck();
+  await page.getByRole("switch", {name:"启用 5 分钟趋势过滤"}).uncheck();
   await page
     .locator(".sidebar")
     .getByRole("link", { name: "策略回测" })
@@ -140,9 +140,9 @@ test("capital exhaustion is displayed and no further trades are simulated", asyn
   await expect(page.locator("p[role=alert]")).toContainText(
     "模拟本金已耗尽，回测已停止",
   );
-  await expect(page.locator("tbody tr")).toHaveCount(1);
-  await expect(page.locator("tbody")).toContainText("-100.000%");
-  await expect(page.locator("tbody")).toContainText("本金耗尽");
+  await expect(page.getByTestId("backtest-trades").locator("tbody tr")).toHaveCount(1);
+  await expect(page.getByTestId("backtest-trades").locator("tbody")).toContainText("-100.000%");
+  await expect(page.getByTestId("backtest-trades").locator("tbody")).toContainText("本金耗尽");
 });
 
 test("risk notices and layout remain usable on narrow screens", async ({

@@ -1,3 +1,4 @@
+import {wilderTrend} from "./technical-filters";
 export type Candle = {
   datetime: string;
   open: number;
@@ -16,6 +17,9 @@ export type Params = {
   rsiMax: number;
   volumePeriod: number;
   volumeMultiplier: number;
+  adxEnabled:boolean;adxPeriod:number;adxMin:number;
+  atrEnabled:boolean;atrPeriod:number;atrMinPercent:number;atrMaxPercent:number;
+  deviationEnabled:boolean;deviationMaxAtr:number;
 };
 export const defaults: Params = {
   trend: 20,
@@ -27,6 +31,9 @@ export const defaults: Params = {
   rsiMax: 70,
   volumePeriod: 20,
   volumeMultiplier: 1.1,
+  adxEnabled:false,adxPeriod:14,adxMin:20,
+  atrEnabled:false,atrPeriod:14,atrMinPercent:0.02,atrMaxPercent:0.5,
+  deviationEnabled:false,deviationMaxAtr:1.5,
 };
 export type Direction = "bullish" | "bearish" | "neutral";
 export const labels: Record<Direction, string> = {
@@ -53,7 +60,9 @@ export type Signal = {
 };
 export function validateParams(p: Params): string | null {
   if (typeof p.trendEnabled !== "boolean") return "趋势过滤开关必须为布尔值";
-  const periods = [p.trend, p.fast, p.slow, p.rsi, p.volumePeriod];
+  if([p.adxEnabled,p.atrEnabled,p.deviationEnabled].some(value=>typeof value!=="boolean"))return "增强过滤开关必须为布尔值";
+  if(![p.adxMin,p.atrMinPercent,p.atrMaxPercent,p.deviationMaxAtr].every(Number.isFinite)||p.adxMin<0||p.adxMin>100||p.atrMinPercent<0||p.atrMaxPercent>100||p.atrMinPercent>=p.atrMaxPercent||p.deviationMaxAtr<=0||p.deviationMaxAtr>20)return "请检查 ADX 强度、ATR 波动上下限和价格偏离阈值";
+  const periods = [p.trend, p.fast, p.slow, p.rsi, p.volumePeriod,p.adxPeriod,p.atrPeriod];
   if (periods.some((n) => !Number.isInteger(n) || n < 2 || n > 100))
     return "指标周期必须为 2–100 的整数";
   if (p.fast >= p.slow) return "快速 EMA 周期必须小于慢速 EMA 周期";
@@ -125,6 +134,7 @@ export function analyze(rows: Candle[], p: Params = defaults): Signal[] {
     fast = ema(closes, p.fast),
     slow = ema(closes, p.slow),
     rs = rsi(closes, p.rsi);
+  const {adx}=wilderTrend(rows,p.adxPeriod),{atr}=wilderTrend(rows,p.atrPeriod);
   const groups = new Map<
     number,
     { last: number; count: number; end: number }
@@ -171,13 +181,16 @@ export function analyze(rows: Candle[], p: Params = defaults): Signal[] {
         : p.trendEnabled && !momentumAligned
           ? `本根收盘${crossUp ? "上穿" : "下穿"}，但与趋势方向不一致或趋势尚未就绪`
           : `本根收盘发生${crossUp ? "上穿" : "下穿"}`;
+    const strength=adx[i],volatility=atr[i],atrPercent=volatility===null?null:volatility/row.close*100,deviation=volatility!==null&&volatility>0?Math.abs(row.close-slow[i])/volatility:null;
+    const okAdx=!p.adxEnabled||(strength!==null&&strength>=p.adxMin),okAtr=!p.atrEnabled||(atrPercent!==null&&atrPercent>=p.atrMinPercent&&atrPercent<=p.atrMaxPercent),okDeviation=!p.deviationEnabled||(deviation!==null&&deviation<=p.deviationMaxAtr);
+    const extraReady=(!p.adxEnabled||strength!==null)&&(!(p.atrEnabled||p.deviationEnabled)||volatility!==null);
     const ready =
       (!p.trendEnabled || cursor >= p.trend - 1) &&
-      i >= Math.max(p.slow, p.rsi, p.volumePeriod);
+      i >= Math.max(p.slow, p.rsi, p.volumePeriod) && extraReady;
     const direction: Direction =
-      ready && (!p.trendEnabled || up) && crossUp && okRsi && okVol
+      ready && (!p.trendEnabled || up) && crossUp && okRsi && okVol && okAdx && okAtr && okDeviation
         ? "bullish"
-        : ready && (!p.trendEnabled || down) && crossDown && okRsi && okVol
+        : ready && (!p.trendEnabled || down) && crossDown && okRsi && okVol && okAdx && okAtr && okDeviation
           ? "bearish"
           : "neutral";
     return {
@@ -217,6 +230,9 @@ export function analyze(rows: Candle[], p: Params = defaults): Signal[] {
           detail: `前 ${p.volumePeriod} 根均量的 ${ratio.toFixed(2)}× / 阈值 ${p.volumeMultiplier}×`,
           pass: okVol,
         },
+        {name:`ADX(${p.adxPeriod}) 趋势强度`,enabled:p.adxEnabled,pass:okAdx,detail:!p.adxEnabled?'已关闭':strength===null?'预热不足':`${strength.toFixed(1)} / 下限 ${p.adxMin}`},
+        {name:`ATR(${p.atrPeriod}) 波动区间`,enabled:p.atrEnabled,pass:okAtr,detail:!p.atrEnabled?'已关闭':atrPercent===null?'预热不足':`${atrPercent.toFixed(4)}% / 区间 ${p.atrMinPercent}–${p.atrMaxPercent}%`},
+        {name:`价格偏离 EMA${p.slow}`,enabled:p.deviationEnabled,pass:okDeviation,detail:!p.deviationEnabled?'已关闭':deviation===null?'预热不足或 ATR 为零':`${deviation.toFixed(2)} ATR / 上限 ${p.deviationMaxAtr} ATR`},
       ],
     };
   });

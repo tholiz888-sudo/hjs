@@ -6,7 +6,8 @@ export function signalOutcome(rows:Candle[],index:number,direction:Direction):Si
  const entry=rows[index],signalTime=entry?Date.parse(entry.datetime)+60_000:NaN,due=signalTime+600_000;
  const empty={dueAt:Number.isFinite(due)?new Date(due).toISOString():'',price:null,changePercent:null};
  if(!entry||!Number.isFinite(due)||!Number.isFinite(entry.close)||entry.close<=0||direction==='neutral')return {...empty,status:'missing'};
- const settled=rows.find(row=>Date.parse(row.datetime)+60_000===due);
+ const candidate=rows[index+10];
+ const settled=candidate&&Date.parse(candidate.datetime)+60_000===due?candidate:rows.find(row=>Date.parse(row.datetime)+60_000===due);
  if(!settled){const latest=rows.at(-1);return {...empty,status:latest&&Date.parse(latest.datetime)+60_000>=due?'missing':'pending'};}
  if(!Number.isFinite(settled.close)||settled.close<=0)return {...empty,status:'missing'};
  const delta=settled.close-entry.close;
